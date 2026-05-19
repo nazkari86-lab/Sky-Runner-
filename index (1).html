@@ -1,0 +1,3770 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Sky Runner is a polished 3D arcade flight game with local highscores, achievements, powerups, and multilingual UI." />
+  <meta name="theme-color" content="#6fa7d9" />
+  <meta property="og:title" content="Sky Runner - Release Edition" />
+  <meta property="og:description" content="A 3D arcade flight game with global leaderboards, achievements, powerups, and RU/KK/EN UI." />
+  <meta property="og:type" content="website" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%2306111f'/%3E%3Cpath d='M9 36 L49 15 L42 31 L55 39 L37 40 L28 54 L25 40 Z' fill='%23ffd45a'/%3E%3Cpath d='M18 35 L42 25 L35 34 L44 38 L29 38 Z' fill='%238fd3ff'/%3E%3C/svg%3E" />
+  <title>Sky Runner - Release Edition</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: Inter, "Segoe UI", Arial, Helvetica, sans-serif;
+      color: #f8fbff;
+      touch-action: none;
+      user-select: none;
+    }
+
+    #world {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: linear-gradient(to bottom, #07111f, #0b2a40);
+    }
+
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 10;
+      padding: 14px 16px;
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      pointer-events: none;
+      text-shadow: 0 2px 10px rgba(0,0,0,0.65);
+    }
+
+    #stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      pointer-events: none;
+      background: linear-gradient(135deg, rgba(10, 22, 38, 0.74), rgba(4, 10, 19, 0.56));
+      border: 1px solid rgba(255,255,255,0.24);
+      border-radius: 8px;
+      padding: 9px 12px;
+      backdrop-filter: blur(12px);
+      font-weight: 700;
+      font-size: 14px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.24);
+      min-height: 36px;
+    }
+
+    .badge.small {
+      font-size: 13px;
+      padding: 8px 10px;
+    }
+
+    .badge strong {
+      color: #ffd45a;
+    }
+
+    #help {
+      max-width: 420px;
+      font-size: 13px;
+      line-height: 1.4;
+      opacity: 0.95;
+      text-align: right;
+      background: rgba(7, 17, 31, 0.38);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 8px;
+      padding: 9px 12px;
+      backdrop-filter: blur(8px);
+    }
+
+    #topControls {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      display: flex;
+      gap: 8px;
+      z-index: 15;
+    }
+
+    .icon-button {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      padding: 0;
+      border-radius: 8px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      line-height: 1;
+      text-transform: none;
+      letter-spacing: 0;
+      background: rgba(7, 17, 31, 0.7);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 10px 26px rgba(0,0,0,0.22);
+    }
+
+    .icon-button:hover,
+    .icon-button:focus-visible {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,0.35);
+    }
+
+    #flash {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle, rgba(255, 58, 58, 0.52), rgba(255, 58, 58, 0));
+      opacity: 0;
+      pointer-events: none;
+      z-index: 8;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+      padding: 18px;
+      background: rgba(2, 6, 14, 0.68);
+      pointer-events: auto;
+    }
+
+    .overlay.hidden,
+    #modal.hidden,
+    #menuOverlay.hidden {
+      display: none;
+    }
+
+    .panel {
+      width: min(94vw, 520px);
+      max-height: min(92vh, 760px);
+      overflow: auto;
+      background: rgba(8, 16, 30, 0.94);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 8px;
+      padding: 26px;
+      text-align: center;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.56), inset 0 1px 0 rgba(255,255,255,0.08);
+      backdrop-filter: blur(20px) saturate(1.18);
+    }
+
+    .release-panel {
+      width: min(94vw, 760px);
+      text-align: left;
+    }
+
+    .panel h1 {
+      font-size: clamp(32px, 7vw, 64px);
+      line-height: 0.95;
+      margin-bottom: 12px;
+      color: #ffffff;
+      letter-spacing: 0;
+    }
+
+    .panel h2 {
+      font-size: 22px;
+      margin: 0 0 12px;
+      color: #ffd45a;
+    }
+
+    .panel p {
+      font-size: 16px;
+      line-height: 1.55;
+      opacity: 0.9;
+      margin-bottom: 18px;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .menu-section {
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 8px;
+      padding: 16px;
+      background: rgba(255,255,255,0.05);
+    }
+
+    .menu-actions,
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 18px;
+    }
+
+    .release-panel .menu-actions {
+      justify-content: flex-start;
+    }
+
+    .stat-line,
+    .setting-row,
+    .leaderboard-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-size: 14px;
+    }
+
+    .leaderboard-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      padding: 7px 9px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      color: rgba(255,255,255,0.86);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .leaderboard-status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ffbf4d;
+      box-shadow: 0 0 12px rgba(255,191,77,0.7);
+    }
+
+    .leaderboard-status.online::before {
+      background: #58f29a;
+      box-shadow: 0 0 12px rgba(88,242,154,0.7);
+    }
+
+    .leaderboard-status.offline::before {
+      background: #ff6b57;
+      box-shadow: 0 0 12px rgba(255,107,87,0.7);
+    }
+
+    .leaderboard-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .leaderboard-table th,
+    .leaderboard-table td {
+      padding: 8px 6px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .leaderboard-table th:first-child,
+    .leaderboard-table td:first-child {
+      text-align: left;
+      white-space: normal;
+      min-width: 110px;
+    }
+
+    .leaderboard-table th {
+      color: #ffd45a;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+
+    .stat-line:last-child,
+    .setting-row:last-child,
+    .leaderboard-row:last-child,
+    .leaderboard-table tr:last-child td {
+      border-bottom: 0;
+    }
+
+    .setting-row label {
+      font-weight: 700;
+    }
+
+    .setting-copy {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+
+    .setting-copy small {
+      color: rgba(255,255,255,0.66);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    select,
+    input[type="text"] {
+      min-width: 150px;
+      max-width: 220px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.22);
+      background: rgba(0,0,0,0.28);
+      color: #fff;
+      padding: 10px 12px;
+      font: inherit;
+    }
+
+    input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      accent-color: #ffd45a;
+    }
+
+    button {
+      pointer-events: auto;
+      border: 0;
+      border-radius: 8px;
+      padding: 13px 18px;
+      font-weight: 800;
+      font-size: 16px;
+      background: #ffd45a;
+      color: #06111f;
+      cursor: pointer;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+      text-transform: uppercase;
+      letter-spacing: 0;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+      min-height: 44px;
+      white-space: normal;
+    }
+
+    button.secondary {
+      background: rgba(255,255,255,0.08);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.18);
+    }
+
+    button.danger {
+      background: #ff6b57;
+      color: #fff;
+    }
+
+    button:hover,
+    button:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 36px rgba(0,0,0,0.32);
+      outline: none;
+    }
+
+    #achievementPopup {
+      position: absolute;
+      top: 76px;
+      left: 50%;
+      transform: translate(-50%, -16px);
+      z-index: 25;
+      min-width: min(88vw, 360px);
+      max-width: 420px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      background: rgba(6, 17, 31, 0.92);
+      border: 1px solid rgba(255, 212, 90, 0.55);
+      box-shadow: 0 18px 50px rgba(0,0,0,0.38);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      text-align: center;
+    }
+
+    #achievementPopup.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    #achievementTitle {
+      font-weight: 900;
+      color: #ffd45a;
+      margin-bottom: 4px;
+    }
+
+    #achievementDesc {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    #mobileControls {
+      position: absolute;
+      left: 14px;
+      bottom: 14px;
+      z-index: 14;
+      display: none;
+      grid-template-columns: repeat(3, 52px);
+      grid-template-rows: repeat(2, 52px);
+      gap: 8px;
+      opacity: 0.9;
+    }
+
+    .touch-btn {
+      min-width: 52px;
+      width: 52px;
+      height: 52px;
+      padding: 0;
+      border-radius: 8px;
+      background: rgba(7, 17, 31, 0.64);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      font-size: 24px;
+      text-transform: none;
+    }
+
+    .touch-btn[data-key="arrowup"] { grid-column: 2; grid-row: 1; }
+    .touch-btn[data-key="arrowleft"] { grid-column: 1; grid-row: 2; }
+    .touch-btn[data-key="arrowdown"] { grid-column: 2; grid-row: 2; }
+    .touch-btn[data-key="arrowright"] { grid-column: 3; grid-row: 2; }
+
+    #threeError {
+      position: absolute;
+      inset: 0;
+      z-index: 100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: #06111f;
+      color: #fff;
+      text-align: center;
+    }
+
+    #threeError.show {
+      display: flex;
+    }
+
+    .is-menu #hud,
+    .is-menu #mobileControls,
+    .is-menu #pauseBtn {
+      display: none;
+    }
+
+    .is-playing #menuOverlay,
+    .is-paused #menuOverlay,
+    .is-gameover #menuOverlay {
+      display: none;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 700px) {
+      #hud {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px;
+        gap: 8px;
+      }
+
+      #stats {
+        gap: 6px;
+      }
+
+      .badge {
+        font-size: 12px;
+        padding: 7px 8px;
+        min-height: 30px;
+      }
+
+      #help {
+        text-align: left;
+        max-width: none;
+        font-size: 12px;
+        padding: 7px 8px;
+      }
+
+      .panel h1 {
+        font-size: 34px;
+      }
+
+      .panel {
+        padding: 18px;
+      }
+
+      .menu-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .setting-row {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      select,
+      input[type="text"] {
+        width: 100%;
+        max-width: none;
+      }
+
+      #topControls {
+        right: 10px;
+        bottom: 10px;
+      }
+
+      #mobileControls {
+        display: grid;
+      }
+    }
+  </style>
+</head>
+<body class="is-menu">
+  <div id="world"></div>
+
+  <div id="hud">
+    <div id="stats">
+      <div class="badge"><span id="scoreLabel">Score</span>: <strong id="score">0</strong></div>
+      <div class="badge"><span id="bestLabel">Best</span>: <strong id="bestScore">0</strong></div>
+      <div class="badge"><span id="livesLabel">Lives</span>: <span id="lives">3</span></div>
+      <div class="badge"><span id="comboLabel">Combo</span>: <strong id="combo">0</strong></div>
+      <div class="badge"><span id="speedLabel">Speed</span>: <strong id="speed">1.0x</strong></div>
+      <div class="badge"><span id="stageLabel">Stage</span>: <strong id="stageName">Sunny</strong></div>
+      <div class="badge small" id="powerupBadge" style="display:none;"><span id="powerupLabel">Powerup</span>: <strong id="powerupText"></strong></div>
+      <div class="badge small" id="cityBadge" style="display:none;"><span id="cityPrefix">Flying over</span>: <strong id="cityName">Tokyo, Japan</strong></div>
+    </div>
+    <div id="help"></div>
+  </div>
+
+  <div id="topControls">
+    <button id="pauseBtn" class="icon-button" type="button" aria-label="Pause" title="Pause">Ⅱ</button>
+    <button id="muteBtn" class="icon-button" type="button" aria-label="Mute" title="Mute">♪</button>
+    <button id="fullscreenBtn" class="icon-button" type="button" aria-label="Fullscreen" title="Fullscreen">⛶</button>
+  </div>
+
+  <div id="mobileControls" aria-hidden="true">
+    <button class="touch-btn" type="button" data-key="arrowup">↑</button>
+    <button class="touch-btn" type="button" data-key="arrowleft">←</button>
+    <button class="touch-btn" type="button" data-key="arrowdown">↓</button>
+    <button class="touch-btn" type="button" data-key="arrowright">→</button>
+  </div>
+
+  <div id="flash"></div>
+
+  <div id="menuOverlay" class="overlay">
+    <div class="panel release-panel">
+      <h1>Sky Runner</h1>
+      <p id="menuSubtitle"></p>
+      <div class="menu-actions">
+        <button id="startBtn" type="button"></button>
+        <button id="leaderboardBtn" class="secondary" type="button"></button>
+        <button id="settingsBtn" class="secondary" type="button"></button>
+      </div>
+      <div class="menu-grid">
+        <section class="menu-section" id="mainMenuPanel">
+          <h2 id="overviewTitle"></h2>
+          <div class="stat-line"><span id="menuBestLabel"></span><strong id="menuBestScore">0</strong></div>
+          <div class="stat-line"><span id="menuGamesLabel"></span><strong id="menuGamesPlayed">0</strong></div>
+          <div class="stat-line"><span id="menuAchievementsLabel"></span><strong id="menuAchievementCount">0/0</strong></div>
+          <p id="menuControlsText" style="margin-top: 12px; margin-bottom: 0;"></p>
+        </section>
+        <section class="menu-section" id="sidePanel">
+          <h2 id="sidePanelTitle"></h2>
+          <div id="leaderboardList"></div>
+          <div id="settingsPanel" class="hidden">
+            <div class="setting-row">
+              <label for="languageSelect" id="languageLabel"></label>
+              <select id="languageSelect">
+                <option value="ru">Русский</option>
+                <option value="kk">Қазақша</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <label for="playerNameInput" id="playerNameLabel"></label>
+              <input id="playerNameInput" type="text" maxlength="16" autocomplete="off" />
+            </div>
+            <div class="setting-row">
+              <label for="graphicsSelect" id="graphicsLabel"></label>
+              <select id="graphicsSelect">
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <label for="controlSelect" id="controlLabel"></label>
+              <select id="controlSelect">
+                <option value="hybrid">Hybrid</option>
+                <option value="pointer">Pointer</option>
+                <option value="keyboard">Keyboard</option>
+              </select>
+            </div>
+            <div class="setting-row">
+              <label for="soundToggle" id="soundLabel"></label>
+              <input id="soundToggle" type="checkbox" />
+            </div>
+            <div class="setting-row">
+              <label for="motionToggle" id="motionLabel"></label>
+              <input id="motionToggle" type="checkbox" />
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy">
+                <label for="immortalToggle" id="immortalLabel"></label>
+                <small id="immortalNote"></small>
+              </div>
+              <input id="immortalToggle" type="checkbox" />
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal" class="overlay hidden">
+    <div class="panel">
+      <h1 id="modalTitle">Game Over</h1>
+      <p id="modalText">Try again and collect more rings!</p>
+      <div id="runSummary" class="stat-line" style="display:none;"><span id="runSummaryLabel"></span><strong id="runSummaryScore"></strong></div>
+      <div class="modal-actions">
+        <button id="resumeBtn" class="secondary" type="button" style="display:none;"></button>
+        <button id="reviveBtn" class="danger" type="button" style="display:none;"></button>
+        <button id="restartBtn" type="button"></button>
+        <button id="menuBtn" class="secondary" type="button"></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="achievementPopup">
+    <div id="achievementTitle"></div>
+    <div id="achievementDesc"></div>
+  </div>
+
+  <div id="threeError">
+    <div class="panel">
+      <h1>Sky Runner</h1>
+      <p id="threeErrorText">Three.js could not be loaded. Check the connection and reload the page.</p>
+      <button id="reloadBtn" type="button">Reload</button>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/86/three.min.js" onerror="window.__threeLoadFailed=true"></script>
+  <script>
+    var STORAGE_KEYS = {
+      settings: "skyRunnerRelease.settings",
+      highScores: "skyRunnerRelease.highScores",
+      achievements: "skyRunnerRelease.achievements",
+      stats: "skyRunnerRelease.stats",
+      clientId: "skyRunnerRelease.clientId",
+      lastScoreSync: "skyRunnerRelease.lastScoreSync"
+    };
+
+    var GLOBAL_LEADERBOARD_ENDPOINT = "https://mantledb.sh/v2/sky-runner-gold/leaderboard";
+    var LOCAL_SCORE_LIMIT = 100;
+    var GLOBAL_SCORE_LIMIT = 250;
+    var GLOBAL_SYNC_COOLDOWN_MS = 3500;
+    var SCORE_LIMITS = {
+      score: 2000000,
+      combo: 1200,
+      rings: 5000,
+      distance: 20000000,
+      runTime: 7200
+    };
+
+    var defaultSettings = {
+      language: "ru",
+      playerName: "Pilot",
+      graphics: "high",
+      controls: "hybrid",
+      sound: true,
+      reducedMotion: false,
+      immortalMode: false
+    };
+
+    var defaultStats = {
+      gamesPlayed: 0,
+      totalScore: 0,
+      totalRings: 0,
+      totalDistance: 0,
+      bestCombo: 0,
+      totalRevives: 0
+    };
+
+    function loadJSON(key, fallback) {
+      try {
+        var raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (e) {
+        return fallback;
+      }
+    }
+
+    function saveJSON(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (e) {}
+    }
+
+    function mergeObject(base, saved) {
+      var out = {};
+      Object.keys(base).forEach(function(key) {
+        out[key] = base[key];
+      });
+      if (saved) {
+        Object.keys(saved).forEach(function(key) {
+          if (key in out) out[key] = saved[key];
+        });
+      }
+      return out;
+    }
+
+    function normalizeSettings(saved) {
+      var next = mergeObject(defaultSettings, saved);
+      if (["ru", "kk", "en"].indexOf(next.language) === -1) next.language = defaultSettings.language;
+      if (["low", "medium", "high"].indexOf(next.graphics) === -1) next.graphics = defaultSettings.graphics;
+      if (["hybrid", "pointer", "keyboard"].indexOf(next.controls) === -1) next.controls = defaultSettings.controls;
+      next.playerName = normalizePlayerName(next.playerName || defaultSettings.playerName);
+      next.sound = next.sound !== false;
+      next.reducedMotion = next.reducedMotion === true;
+      next.immortalMode = next.immortalMode === true;
+      return next;
+    }
+
+    function normalizeStats(saved) {
+      var next = mergeObject(defaultStats, saved);
+      Object.keys(defaultStats).forEach(function(key) {
+        next[key] = Math.max(0, Math.round(Number(next[key]) || 0));
+      });
+      return next;
+    }
+
+    var settings = normalizeSettings(loadJSON(STORAGE_KEYS.settings, null));
+    var savedHighScores = loadJSON(STORAGE_KEYS.highScores, []);
+    var highScores = Array.isArray(savedHighScores) ? savedHighScores : [];
+    var globalHighScores = [];
+    var savedAchievements = loadJSON(STORAGE_KEYS.achievements, []);
+    var unlockedAchievements = Array.isArray(savedAchievements) ? savedAchievements : [];
+    var stats = normalizeStats(loadJSON(STORAGE_KEYS.stats, null));
+    var leaderboardStatus = "loading";
+    var leaderboardSyncing = false;
+    var cachedBestScore = null;
+    var gameMode = "menu";
+    var gameClock = 0;
+    var lastFrameTime = 0;
+    var currentSidePanel = "leaderboard";
+    var runSaved = false;
+
+    var I18N = {
+      ru: {
+        menuSubtitle: "Полет через погоду, города и космос. Собирай кольца, держи комбо и используй усиления.",
+        start: "Старт",
+        leaderboard: "Рекорды",
+        settings: "Настройки",
+        overview: "Профиль",
+        bestRun: "Лучший счет",
+        gamesPlayed: "Запуски",
+        achievements: "Достижения",
+        controlsIntro: "Управление: мышь, тач, WASD или стрелки. P/Esc - пауза, F - полный экран, M - звук.",
+        noScores: "Рекордов пока нет.",
+        leaderboardPlayer: "Игрок",
+        leaderboardBest: "Рекорд",
+        leaderboardRuns: "Игр",
+        leaderboardCombo: "Комбо",
+        leaderboardLast: "Последний",
+        leaderboardOnline: "Общая таблица онлайн",
+        leaderboardOffline: "Общая таблица недоступна, показаны сохраненные результаты",
+        leaderboardSaving: "Сохраняем результат онлайн",
+        leaderboardLoading: "Загружаем общую таблицу",
+        language: "Язык",
+        playerName: "Имя пилота",
+        graphics: "Графика",
+        controls: "Управление",
+        sound: "Звук",
+        reducedMotion: "Меньше анимации",
+        immortalMode: "Бессмертие (без рекордов)",
+        immortalNote: "Для просмотра всех этапов. Очки не попадут в рекорды и общую таблицу.",
+        immortalHud: "Бессмертие: рекорды отключены",
+        score: "Счет",
+        best: "Рекорд",
+        lives: "Жизни",
+        combo: "Комбо",
+        speed: "Скорость",
+        stage: "Этап",
+        powerup: "Усиление",
+        flyingOver: "Пролет",
+        help: "Кольца дают очки и комбо. Усиления помогают выжить. Держись в воздухе как можно дольше.",
+        pause: "Пауза",
+        mute: "Выключить звук",
+        unmute: "Включить звук",
+        fullscreen: "Полный экран",
+        resume: "Продолжить",
+        restart: "Заново",
+        mainMenu: "Меню",
+        runScore: "Счет за полет",
+        gameOverTitle: "Полет завершен",
+        gameOverText: "Сохранили результат. Попробуй удержать комбо дольше.",
+        crashTitle: "Крушение",
+        reviveText: "Восстановиться за {cost} очков? Осталось {seconds} с.",
+        reviveBtn: "Восстать ({cost})",
+        pausedTitle: "Пауза",
+        pausedText: "Полет поставлен на паузу.",
+        threeError: "Three.js не загрузился. Проверь подключение и обнови страницу.",
+        reload: "Обновить",
+        achievementTitle: "Достижение открыто",
+        graphicsLow: "Низкая",
+        graphicsMedium: "Средняя",
+        graphicsHigh: "Высокая",
+        controlsHybrid: "Гибрид",
+        controlsPointer: "Мышь/тач",
+        controlsKeyboard: "Клавиатура",
+        stageSunny: "Солнце",
+        stageSnow: "Снег",
+        stageStorm: "Шторм",
+        stageSpace: "Космос",
+        shield: "Щит",
+        magnet: "Магнит",
+        slow: "Замедление",
+        firstRingName: "Первое кольцо",
+        firstRingDesc: "Собрано первое кольцо.",
+        combo5Name: "Чистая серия",
+        combo5Desc: "Комбо из 5 колец.",
+        score300Name: "Сквозь снег",
+        score300Desc: "Добрался до снежного этапа.",
+        score1000Name: "Орбита",
+        score1000Desc: "Долетел до космоса.",
+        reviveName: "Второй шанс",
+        reviveDesc: "Использовано восстановление.",
+        survivor60Name: "Минутный пилот",
+        survivor60Desc: "Выжил 60 секунд."
+      },
+      kk: {
+        menuSubtitle: "Ауа райы, қалалар және ғарыш арқылы ұш. Сақиналарды жина, комбоны сақта және күшейткіштерді қолдан.",
+        start: "Бастау",
+        leaderboard: "Рекордтар",
+        settings: "Баптаулар",
+        overview: "Профиль",
+        bestRun: "Үздік ұпай",
+        gamesPlayed: "Ойындар",
+        achievements: "Жетістіктер",
+        controlsIntro: "Басқару: тышқан, touch, WASD немесе бағыт пернелері. P/Esc - кідіріс, F - толық экран, M - дыбыс.",
+        noScores: "Әзірге рекорд жоқ.",
+        leaderboardPlayer: "Ойыншы",
+        leaderboardBest: "Рекорд",
+        leaderboardRuns: "Ойын",
+        leaderboardCombo: "Комбо",
+        leaderboardLast: "Соңғы",
+        leaderboardOnline: "Ортақ кесте онлайн",
+        leaderboardOffline: "Ортақ кесте қолжетімсіз, сақталған нәтижелер көрсетілді",
+        leaderboardSaving: "Нәтиже онлайн сақталуда",
+        leaderboardLoading: "Ортақ кесте жүктелуде",
+        language: "Тіл",
+        playerName: "Ұшқыш аты",
+        graphics: "Графика",
+        controls: "Басқару",
+        sound: "Дыбыс",
+        reducedMotion: "Анимацияны азайту",
+        immortalMode: "Өлмейтін режим (рекордсыз)",
+        immortalNote: "Барлық кезеңді көруге арналған. Ұпай рекордтарға және ортақ кестеге түспейді.",
+        immortalHud: "Өлмейтін режим: рекордтар өшірулі",
+        score: "Ұпай",
+        best: "Рекорд",
+        lives: "Өмір",
+        combo: "Комбо",
+        speed: "Жылдамдық",
+        stage: "Кезең",
+        powerup: "Күшейткіш",
+        flyingOver: "Үстінен ұшу",
+        help: "Сақиналар ұпай мен комбо береді. Күшейткіштер аман қалуға көмектеседі.",
+        pause: "Кідіріс",
+        mute: "Дыбысты өшіру",
+        unmute: "Дыбысты қосу",
+        fullscreen: "Толық экран",
+        resume: "Жалғастыру",
+        restart: "Қайта бастау",
+        mainMenu: "Мәзір",
+        runScore: "Ұшу ұпайы",
+        gameOverTitle: "Ұшу аяқталды",
+        gameOverText: "Нәтиже сақталды. Комбоны ұзағырақ ұстап көр.",
+        crashTitle: "Соқтығыс",
+        reviveText: "{cost} ұпайға қалпына келу? {seconds} с қалды.",
+        reviveBtn: "Қалпына келу ({cost})",
+        pausedTitle: "Кідіріс",
+        pausedText: "Ұшу уақытша тоқтатылды.",
+        threeError: "Three.js жүктелмеді. Байланысты тексеріп, бетті жаңарт.",
+        reload: "Жаңарту",
+        achievementTitle: "Жетістік ашылды",
+        graphicsLow: "Төмен",
+        graphicsMedium: "Орташа",
+        graphicsHigh: "Жоғары",
+        controlsHybrid: "Аралас",
+        controlsPointer: "Тышқан/touch",
+        controlsKeyboard: "Пернетақта",
+        stageSunny: "Күн",
+        stageSnow: "Қар",
+        stageStorm: "Дауыл",
+        stageSpace: "Ғарыш",
+        shield: "Қалқан",
+        magnet: "Магнит",
+        slow: "Баяулату",
+        firstRingName: "Алғашқы сақина",
+        firstRingDesc: "Алғашқы сақина жиналды.",
+        combo5Name: "Таза серия",
+        combo5Desc: "5 сақинадан комбо.",
+        score300Name: "Қарға жету",
+        score300Desc: "Қарлы кезеңге жеттің.",
+        score1000Name: "Орбита",
+        score1000Desc: "Ғарышқа жеттің.",
+        reviveName: "Екінші мүмкіндік",
+        reviveDesc: "Қалпына келу қолданылды.",
+        survivor60Name: "Бір минуттық ұшқыш",
+        survivor60Desc: "60 секунд аман қалдың."
+      },
+      en: {
+        menuSubtitle: "Fly through weather, cities, and space. Collect rings, hold combo, and use powerups.",
+        start: "Start",
+        leaderboard: "Leaderboard",
+        settings: "Settings",
+        overview: "Profile",
+        bestRun: "Best score",
+        gamesPlayed: "Runs",
+        achievements: "Achievements",
+        controlsIntro: "Controls: mouse, touch, WASD, or arrows. P/Esc pauses, F fullscreen, M sound.",
+        noScores: "No scores yet.",
+        leaderboardPlayer: "Player",
+        leaderboardBest: "Best",
+        leaderboardRuns: "Runs",
+        leaderboardCombo: "Combo",
+        leaderboardLast: "Last",
+        leaderboardOnline: "Global leaderboard online",
+        leaderboardOffline: "Global leaderboard unavailable, showing saved results",
+        leaderboardSaving: "Saving score online",
+        leaderboardLoading: "Loading global leaderboard",
+        language: "Language",
+        playerName: "Pilot name",
+        graphics: "Graphics",
+        controls: "Controls",
+        sound: "Sound",
+        reducedMotion: "Reduced motion",
+        immortalMode: "Immortality (no records)",
+        immortalNote: "For exploring every stage. Scores do not enter records or the global leaderboard.",
+        immortalHud: "Immortality: records disabled",
+        score: "Score",
+        best: "Best",
+        lives: "Lives",
+        combo: "Combo",
+        speed: "Speed",
+        stage: "Stage",
+        powerup: "Powerup",
+        flyingOver: "Flying over",
+        help: "Rings build score and combo. Powerups help you survive. Stay airborne as long as possible.",
+        pause: "Pause",
+        mute: "Mute",
+        unmute: "Unmute",
+        fullscreen: "Fullscreen",
+        resume: "Resume",
+        restart: "Restart",
+        mainMenu: "Menu",
+        runScore: "Run score",
+        gameOverTitle: "Flight complete",
+        gameOverText: "Score saved. Try to hold the combo longer.",
+        crashTitle: "Crash",
+        reviveText: "Revive for {cost} points? {seconds}s left.",
+        reviveBtn: "Revive ({cost})",
+        pausedTitle: "Paused",
+        pausedText: "Flight is paused.",
+        threeError: "Three.js could not be loaded. Check the connection and reload the page.",
+        reload: "Reload",
+        achievementTitle: "Achievement unlocked",
+        graphicsLow: "Low",
+        graphicsMedium: "Medium",
+        graphicsHigh: "High",
+        controlsHybrid: "Hybrid",
+        controlsPointer: "Pointer/touch",
+        controlsKeyboard: "Keyboard",
+        stageSunny: "Sunny",
+        stageSnow: "Snow",
+        stageStorm: "Storm",
+        stageSpace: "Space",
+        shield: "Shield",
+        magnet: "Magnet",
+        slow: "Slow time",
+        firstRingName: "First ring",
+        firstRingDesc: "Collect the first ring.",
+        combo5Name: "Clean streak",
+        combo5Desc: "Reach a 5-ring combo.",
+        score300Name: "Through snow",
+        score300Desc: "Reach the snow stage.",
+        score1000Name: "Orbit",
+        score1000Desc: "Reach space.",
+        reviveName: "Second chance",
+        reviveDesc: "Use a revive.",
+        survivor60Name: "Minute pilot",
+        survivor60Desc: "Survive 60 seconds."
+      }
+    };
+
+    var ACHIEVEMENTS = ["firstRing", "combo5", "score300", "score1000", "revive", "survivor60"];
+    var STAGE_KEYS = ["stageSunny", "stageSnow", "stageStorm", "stageSpace"];
+    var POWERUP_KEYS = { shield: "shield", magnet: "magnet", slow: "slow" };
+
+    function t(key, replacements) {
+      var lang = I18N[settings.language] ? settings.language : "en";
+      var text = I18N[lang][key] || I18N.en[key] || key;
+      if (replacements) {
+        Object.keys(replacements).forEach(function(name) {
+          text = text.replace("{" + name + "}", replacements[name]);
+        });
+      }
+      return text;
+    }
+
+    var soundManager = {
+      audioContext: null,
+      musicNodes: [],
+      musicPlaying: false,
+      muted: settings.sound === false,
+      init: function() {
+        if (this.audioContext) return;
+        try {
+          this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch(e) {}
+      },
+      ensureReady: function() {
+        this.init();
+        if (this.audioContext && this.audioContext.state === "suspended") {
+          this.audioContext.resume();
+        }
+      },
+      isSilent: function() {
+        return this.muted || settings.sound === false;
+      },
+      setMuted: function(value) {
+        this.muted = value;
+        settings.sound = !value;
+        saveSettings();
+        if (value) {
+          this.stopMusic();
+        } else if (gameMode === "playing") {
+          this.ensureReady();
+          this.startMusic();
+        }
+        applyLocalization();
+      },
+      playCollect: function() {
+        if (!this.audioContext || this.isSilent()) return;
+        var o = this.audioContext.createOscillator();
+        var g = this.audioContext.createGain();
+        o.connect(g);
+        g.connect(this.audioContext.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(880, this.audioContext.currentTime);
+        o.frequency.exponentialRampToValueAtTime(1760, this.audioContext.currentTime + 0.15);
+        g.gain.setValueAtTime(0.4, this.audioContext.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.25);
+        o.start(this.audioContext.currentTime);
+        o.stop(this.audioContext.currentTime + 0.25);
+      },
+      playObstacle: function() {
+        if (!this.audioContext || this.isSilent()) return;
+        var o = this.audioContext.createOscillator();
+        var g = this.audioContext.createGain();
+        o.connect(g);
+        g.connect(this.audioContext.destination);
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(150, this.audioContext.currentTime);
+        o.frequency.exponentialRampToValueAtTime(50, this.audioContext.currentTime + 0.4);
+        g.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.4);
+        o.start(this.audioContext.currentTime);
+        o.stop(this.audioContext.currentTime + 0.4);
+      },
+      playStart: function() {
+        if (!this.audioContext || this.isSilent()) return;
+        var o = this.audioContext.createOscillator();
+        var g = this.audioContext.createGain();
+        o.connect(g);
+        g.connect(this.audioContext.destination);
+        o.type = 'sine';
+        o.frequency.setValueAtTime(220, this.audioContext.currentTime);
+        o.frequency.exponentialRampToValueAtTime(880, this.audioContext.currentTime + 0.6);
+        g.gain.setValueAtTime(0.35, this.audioContext.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.6);
+        o.start(this.audioContext.currentTime);
+        o.stop(this.audioContext.currentTime + 0.6);
+      },
+      playPowerup: function() {
+        if (!this.audioContext || this.isSilent()) return;
+        var o = this.audioContext.createOscillator();
+        var g = this.audioContext.createGain();
+        o.connect(g);
+        g.connect(this.audioContext.destination);
+        o.type = "triangle";
+        o.frequency.setValueAtTime(440, this.audioContext.currentTime);
+        o.frequency.exponentialRampToValueAtTime(1320, this.audioContext.currentTime + 0.2);
+        g.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.35);
+        o.start(this.audioContext.currentTime);
+        o.stop(this.audioContext.currentTime + 0.35);
+      },
+      playAchievement: function() {
+        if (!this.audioContext || this.isSilent()) return;
+        var now = this.audioContext.currentTime;
+        [523, 659, 784].forEach(function(freq, i) {
+          var o = soundManager.audioContext.createOscillator();
+          var g = soundManager.audioContext.createGain();
+          o.connect(g);
+          g.connect(soundManager.audioContext.destination);
+          o.type = "sine";
+          o.frequency.setValueAtTime(freq, now + i * 0.08);
+          g.gain.setValueAtTime(0.22, now + i * 0.08);
+          g.gain.exponentialRampToValueAtTime(0.01, now + 0.35 + i * 0.08);
+          o.start(now + i * 0.08);
+          o.stop(now + 0.45 + i * 0.08);
+        });
+      },
+      startMusic: function() {
+        // Keep gameplay free of a constant oscillator drone; short SFX still play normally.
+        this.musicPlaying = false;
+      },
+      stopMusic: function() {
+        if (!this.audioContext) return;
+        this.musicPlaying = false;
+        for (var i = 0; i < this.musicNodes.length; i++) {
+          var node = this.musicNodes[i];
+          node.gain.gain.linearRampToValueAtTime(0, this.audioContext.currentTime + 1);
+          (function(n) {
+            setTimeout(function() {
+              try { n.osc.stop(); } catch (e) {}
+            }, 1000);
+          })(node);
+        }
+        this.musicNodes = [];
+      }
+    };
+
+    var Colors = {
+      red: 0xf25346,
+      yellow: 0xedeb27,
+      white: 0xd8d0d1,
+      brown: 0x59332e,
+      pink: 0xF5986E,
+      brownDark: 0x23190f,
+      blue: 0x68c3c0,
+      green: 0x458248,
+      purple: 0x551A8B,
+      lightgreen: 0x629265,
+    };
+
+    var scene, camera, fieldOfView, aspectRatio, nearPlane, farPlane, HEIGHT, WIDTH, renderer, container;
+    var hemisphereLight, shadowLight;
+
+    var sky, forest, land, orbit, airplane, sun, solarSystem, stars;
+    var cityWorld;
+    var cities = [];
+
+    var mousePos = { x: 0, y: 0 };
+    var offSet = -3000;
+
+    var rings = [];
+    var obstacles = [];
+    var powerups = [];
+
+    var score = 0;
+    var lives = 3;
+    var gameOver = false;
+    var won = false;
+    var hitTimer = 0;
+    var runTime = 0;
+    var distance = 0;
+    var comboCount = 0;
+    var comboTimer = 0;
+    var bestComboThisRun = 0;
+    var ringsCollectedThisRun = 0;
+    
+    var currentStage = 0;
+    var scoreMultiplier = 1;
+    var maxLives = 3;
+    var activeEffects = { shield: 0, magnet: 0, slow: 0 };
+    var powerupTypes = ["shield", "magnet", "slow"];
+    var STAGE_THRESHOLDS = { snow: 700, storm: 1700, space: 3200 };
+    var POWERUP_DURATIONS = { shield: 5, magnet: 4, slow: 3.5, reviveShield: 2 };
+
+    var scoreEl = document.getElementById("score");
+    var bestScoreEl = document.getElementById("bestScore");
+    var livesEl = document.getElementById("lives");
+    var comboEl = document.getElementById("combo");
+    var speedEl = document.getElementById("speed");
+    var stageNameEl = document.getElementById("stageName");
+    var powerupBadgeEl = document.getElementById("powerupBadge");
+    var powerupTextEl = document.getElementById("powerupText");
+    var cityBadgeEl = document.getElementById("cityBadge");
+    var cityNameEl = document.getElementById("cityName");
+    var cityPrefixEl = document.getElementById("cityPrefix");
+    var flashEl = document.getElementById("flash");
+    var helpEl = document.getElementById("help");
+    var menuOverlayEl = document.getElementById("menuOverlay");
+    var modalEl = document.getElementById("modal");
+    var modalTitleEl = document.getElementById("modalTitle");
+    var modalTextEl = document.getElementById("modalText");
+    var runSummaryEl = document.getElementById("runSummary");
+    var runSummaryLabelEl = document.getElementById("runSummaryLabel");
+    var runSummaryScoreEl = document.getElementById("runSummaryScore");
+    var startBtn = document.getElementById("startBtn");
+    var leaderboardBtn = document.getElementById("leaderboardBtn");
+    var settingsBtn = document.getElementById("settingsBtn");
+    var pauseBtn = document.getElementById("pauseBtn");
+    var muteBtn = document.getElementById("muteBtn");
+    var fullscreenBtn = document.getElementById("fullscreenBtn");
+    var resumeBtn = document.getElementById("resumeBtn");
+    var restartBtn = document.getElementById("restartBtn");
+    var reviveBtn = document.getElementById("reviveBtn");
+    var menuBtn = document.getElementById("menuBtn");
+    var languageSelect = document.getElementById("languageSelect");
+    var playerNameInput = document.getElementById("playerNameInput");
+    var graphicsSelect = document.getElementById("graphicsSelect");
+    var controlSelect = document.getElementById("controlSelect");
+    var soundToggle = document.getElementById("soundToggle");
+    var motionToggle = document.getElementById("motionToggle");
+    var immortalToggle = document.getElementById("immortalToggle");
+    var leaderboardListEl = document.getElementById("leaderboardList");
+    var settingsPanelEl = document.getElementById("settingsPanel");
+    var sidePanelTitleEl = document.getElementById("sidePanelTitle");
+    var achievementPopupEl = document.getElementById("achievementPopup");
+    var achievementTitleEl = document.getElementById("achievementTitle");
+    var achievementDescEl = document.getElementById("achievementDesc");
+    var threeErrorEl = document.getElementById("threeError");
+    var threeErrorTextEl = document.getElementById("threeErrorText");
+    var reloadBtn = document.getElementById("reloadBtn");
+    
+    var REVIVE_COST = 150;
+    var reviveTimer = 0;
+    var reviveInterval = null;
+
+    var keys = {};
+    var hudCache = {};
+    var frameCounter = 0;
+
+    function rand(min, max) {
+      return min + Math.random() * (max - min);
+    }
+
+    function clamp(v, min, max) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+    function setTextIfChanged(element, key, value) {
+      value = String(value);
+      if (hudCache[key] !== value) {
+        element.textContent = value;
+        hudCache[key] = value;
+      }
+    }
+
+    function setHTMLIfChanged(element, key, value) {
+      if (hudCache[key] !== value) {
+        element.innerHTML = value;
+        hudCache[key] = value;
+      }
+    }
+
+    function setDisplayIfChanged(element, key, value) {
+      if (hudCache[key] !== value) {
+        element.style.display = value;
+        hudCache[key] = value;
+      }
+    }
+
+    function clearHUDCache() {
+      hudCache = {};
+    }
+
+    function saveSettings() {
+      settings = normalizeSettings(settings);
+      saveJSON(STORAGE_KEYS.settings, settings);
+    }
+
+    function saveStats() {
+      stats = normalizeStats(stats);
+      saveJSON(STORAGE_KEYS.stats, stats);
+    }
+
+    function getClientId() {
+      var id = loadJSON(STORAGE_KEYS.clientId, null);
+      if (!id) {
+        id = "pilot-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        saveJSON(STORAGE_KEYS.clientId, id);
+      }
+      return id;
+    }
+
+    function makeRunId() {
+      return getClientId() + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    }
+
+    function makeLegacyScoreId(entry, name, score, date) {
+      return "legacy-" + String(name).toLowerCase().replace(/[^a-z0-9а-яёқңғүұәөһі -]/gi, "").replace(/\s+/g, "-").slice(0, 18) + "-" + score + "-" + String(date).slice(0, 10);
+    }
+
+    function normalizeScoreNumber(value, max) {
+      var number = Math.round(Number(value) || 0);
+      return clamp(number, 0, max);
+    }
+
+    function normalizeScoreDate(value) {
+      var timestamp = Date.parse(String(value || ""));
+      var now = Date.now();
+      if (!isFinite(timestamp) || timestamp > now + 86400000 || timestamp < 1704067200000) {
+        timestamp = now;
+      }
+      return new Date(timestamp).toISOString();
+    }
+
+    function sanitizeScoreEntry(entry) {
+      if (!entry || entry.immortalMode === true) return null;
+      var name = normalizePlayerName(entry.name);
+      var rawScore = Number(entry.score);
+      var rawCombo = Number(entry.combo);
+      var rawRings = Number(entry.rings);
+      var rawDistance = Number(entry.distance);
+      var rawRunTime = Number(entry.runTime);
+      if (!isFinite(rawScore) || rawScore < 0) return null;
+      if (rawScore > SCORE_LIMITS.score || rawCombo > SCORE_LIMITS.combo || rawRings > SCORE_LIMITS.rings || rawDistance > SCORE_LIMITS.distance || rawRunTime > SCORE_LIMITS.runTime) return null;
+      var score = normalizeScoreNumber(entry.score, SCORE_LIMITS.score);
+      var combo = normalizeScoreNumber(entry.combo, SCORE_LIMITS.combo);
+      var rings = normalizeScoreNumber(entry.rings, SCORE_LIMITS.rings);
+      var distance = normalizeScoreNumber(entry.distance, SCORE_LIMITS.distance);
+      var runTime = Math.min(SCORE_LIMITS.runTime, Math.max(0, Number(entry.runTime) || 0));
+      var stage = clamp(Math.round(Number(entry.stage) || 0), 0, 3);
+      var date = normalizeScoreDate(entry.date);
+      var rawId = String(entry.id || makeLegacyScoreId(entry, name, score, date));
+      var id = rawId.replace(/[^a-z0-9а-яёқңғүұәөһі._:-]/gi, "").slice(0, 96) || makeLegacyScoreId(entry, name, score, date);
+      if (!name || score < 0 || score > SCORE_LIMITS.score) return null;
+      if (combo > SCORE_LIMITS.combo || rings > SCORE_LIMITS.rings || distance > SCORE_LIMITS.distance || runTime > SCORE_LIMITS.runTime) return null;
+      return {
+        id: id,
+        name: name,
+        score: score,
+        combo: combo,
+        stage: stage,
+        rings: rings,
+        distance: distance,
+        runTime: Number(runTime.toFixed(1)),
+        date: date
+      };
+    }
+
+    function normalizeScoreEntries(entries) {
+      if (!Array.isArray(entries)) return [];
+      return entries.map(function(entry) {
+        return sanitizeScoreEntry(entry);
+      }).filter(function(entry) {
+        return !!entry;
+      });
+    }
+
+    function mergeScoreEntries(localEntries, remoteEntries) {
+      var byId = {};
+      normalizeScoreEntries(remoteEntries).concat(normalizeScoreEntries(localEntries)).forEach(function(entry) {
+        byId[entry.id] = entry;
+      });
+      return Object.keys(byId).map(function(id) { return byId[id]; }).sort(function(a, b) {
+        if (b.score !== a.score) return b.score - a.score;
+        if (b.combo !== a.combo) return b.combo - a.combo;
+        return String(b.date).localeCompare(String(a.date));
+      });
+    }
+
+    function getAllScoreEntries() {
+      return mergeScoreEntries(highScores, globalHighScores);
+    }
+
+    function invalidateBestScore() {
+      cachedBestScore = null;
+    }
+
+    highScores = normalizeScoreEntries(highScores).slice(0, LOCAL_SCORE_LIMIT);
+    saveJSON(STORAGE_KEYS.highScores, highScores);
+
+    function setLeaderboardStatus(status) {
+      leaderboardStatus = status;
+      if (currentSidePanel === "leaderboard") renderLeaderboard();
+    }
+
+    function fetchGlobalLeaderboard() {
+      if (!GLOBAL_LEADERBOARD_ENDPOINT || !window.fetch) {
+        setLeaderboardStatus("offline");
+        return Promise.resolve([]);
+      }
+      setLeaderboardStatus("loading");
+      return fetch(GLOBAL_LEADERBOARD_ENDPOINT + "?t=" + Date.now(), {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+        cache: "no-store"
+      }).then(function(response) {
+        if (!response.ok) throw new Error("Leaderboard GET " + response.status);
+        return response.json();
+      }).then(function(data) {
+        globalHighScores = normalizeScoreEntries(data && (data.scores || (data.data && data.data.scores)));
+        invalidateBestScore();
+        setLeaderboardStatus("online");
+        renderMenuStats();
+        return globalHighScores;
+      }).catch(function() {
+        setLeaderboardStatus("offline");
+        return [];
+      });
+    }
+
+    function syncGlobalScore(entry) {
+      if (!GLOBAL_LEADERBOARD_ENDPOINT || !window.fetch || leaderboardSyncing) return;
+      if (settings.immortalMode) return;
+      var now = Date.now();
+      var lastSync = Number(loadJSON(STORAGE_KEYS.lastScoreSync, 0)) || 0;
+      if (now - lastSync < GLOBAL_SYNC_COOLDOWN_MS) {
+        return;
+      }
+      saveJSON(STORAGE_KEYS.lastScoreSync, now);
+      leaderboardSyncing = true;
+      setLeaderboardStatus("saving");
+      fetch(GLOBAL_LEADERBOARD_ENDPOINT + "?t=" + Date.now(), {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+        cache: "no-store"
+      }).then(function(response) {
+        if (!response.ok) throw new Error("Leaderboard GET " + response.status);
+        return response.json();
+      }).then(function(data) {
+        var merged = mergeScoreEntries(highScores.concat([entry]), data && (data.scores || (data.data && data.data.scores))).slice(0, GLOBAL_SCORE_LIMIT);
+        return fetch(GLOBAL_LEADERBOARD_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body: JSON.stringify({ version: 1, updatedAt: new Date().toISOString(), scores: merged })
+        }).then(function(response) {
+          if (!response.ok) throw new Error("Leaderboard POST " + response.status);
+          globalHighScores = merged;
+          invalidateBestScore();
+          setLeaderboardStatus("online");
+        });
+      }).catch(function() {
+        setLeaderboardStatus("offline");
+      }).then(function() {
+        leaderboardSyncing = false;
+        renderLeaderboard();
+      });
+    }
+
+    function getBestScore() {
+      if (cachedBestScore !== null) return cachedBestScore;
+      var best = 0;
+      var entries = getAllScoreEntries();
+      for (var i = 0; i < entries.length; i++) {
+        best = Math.max(best, Number(entries[i].score) || 0);
+      }
+      cachedBestScore = best;
+      return cachedBestScore;
+    }
+
+    function normalizePlayerName(name) {
+      var clean = String(name || "Pilot").trim().replace(/\s+/g, " ").slice(0, 16);
+      return clean || "Pilot";
+    }
+
+    function getLeaderboardRows() {
+      var players = {};
+      var entries = getAllScoreEntries();
+      for (var i = 0; i < entries.length; i++) {
+        var entry = entries[i] || {};
+        var name = normalizePlayerName(entry.name);
+        if (!players[name]) {
+          players[name] = { name: name, best: 0, runs: 0, bestCombo: 0, lastScore: 0, lastDate: "", stage: 0 };
+        }
+        var row = players[name];
+        var entryScore = Number(entry.score) || 0;
+        var entryCombo = Number(entry.combo) || 0;
+        row.runs += 1;
+        row.best = Math.max(row.best, entryScore);
+        row.bestCombo = Math.max(row.bestCombo, entryCombo);
+        row.stage = Math.max(row.stage, Number(entry.stage) || 0);
+        if (!row.lastDate || String(entry.date || "") > row.lastDate) {
+          row.lastDate = String(entry.date || "");
+          row.lastScore = entryScore;
+        }
+      }
+      return Object.keys(players).map(function(name) { return players[name]; }).sort(function(a, b) {
+        if (b.best !== a.best) return b.best - a.best;
+        if (b.bestCombo !== a.bestCombo) return b.bestCombo - a.bestCombo;
+        return b.runs - a.runs;
+      });
+    }
+
+    function saveHighScore() {
+      if (runSaved || (score <= 0 && runTime < 1)) return;
+      runSaved = true;
+      if (settings.immortalMode) {
+        renderMenuStats();
+        renderLeaderboard();
+        return;
+      }
+      var entry = sanitizeScoreEntry({
+        id: makeRunId(),
+        name: normalizePlayerName(settings.playerName),
+        score: score,
+        combo: bestComboThisRun,
+        stage: currentStage,
+        rings: ringsCollectedThisRun,
+        distance: Math.round(distance),
+        runTime: Number(runTime.toFixed(1)),
+        date: new Date().toISOString()
+      });
+      if (!entry) return;
+      highScores.push(entry);
+      highScores.sort(function(a, b) {
+        return String(b.date || "").localeCompare(String(a.date || ""));
+      });
+      highScores = normalizeScoreEntries(highScores).slice(0, LOCAL_SCORE_LIMIT);
+      saveJSON(STORAGE_KEYS.highScores, highScores);
+      invalidateBestScore();
+      stats.totalScore += score;
+      stats.totalRings += ringsCollectedThisRun;
+      stats.totalDistance += Math.round(distance);
+      stats.bestCombo = Math.max(stats.bestCombo || 0, bestComboThisRun);
+      saveStats();
+      renderMenuStats();
+      renderLeaderboard();
+      syncGlobalScore(entry);
+    }
+
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, function(ch) {
+        return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch];
+      });
+    }
+
+    function isAchievementUnlocked(id) {
+      return unlockedAchievements.indexOf(id) !== -1;
+    }
+
+    function unlockAchievement(id) {
+      if (settings.immortalMode) return;
+      if (isAchievementUnlocked(id) || ACHIEVEMENTS.indexOf(id) === -1) return;
+      unlockedAchievements.push(id);
+      saveJSON(STORAGE_KEYS.achievements, unlockedAchievements);
+      achievementTitleEl.textContent = t("achievementTitle");
+      achievementDescEl.textContent = t(id + "Name") + " - " + t(id + "Desc");
+      achievementPopupEl.classList.add("show");
+      soundManager.playAchievement();
+      setTimeout(function() {
+        achievementPopupEl.classList.remove("show");
+      }, 2600);
+      renderMenuStats();
+    }
+
+    function renderLeaderboard() {
+      if (!leaderboardListEl) return;
+      var rows = getLeaderboardRows();
+      var statusKey = leaderboardStatus === "online" ? "leaderboardOnline" : (leaderboardStatus === "saving" ? "leaderboardSaving" : (leaderboardStatus === "loading" ? "leaderboardLoading" : "leaderboardOffline"));
+      var statusClass = leaderboardStatus === "online" ? "online" : (leaderboardStatus === "offline" ? "offline" : "");
+      var statusHtml = '<div class="leaderboard-status ' + statusClass + '">' + escapeHTML(t(statusKey)) + '</div>';
+      if (!rows.length) {
+        leaderboardListEl.innerHTML = statusHtml + '<div class="leaderboard-row"><span>' + escapeHTML(t("noScores")) + '</span></div>';
+        return;
+      }
+      var html = statusHtml + '<table class="leaderboard-table"><thead><tr>' +
+        '<th>' + escapeHTML(t("leaderboardPlayer")) + '</th>' +
+        '<th>' + escapeHTML(t("leaderboardBest")) + '</th>' +
+        '<th>' + escapeHTML(t("leaderboardRuns")) + '</th>' +
+        '<th>' + escapeHTML(t("leaderboardCombo")) + '</th>' +
+        '<th>' + escapeHTML(t("leaderboardLast")) + '</th>' +
+        '</tr></thead><tbody>';
+      html += rows.slice(0, 12).map(function(row, index) {
+        return '<tr><td>#' + (index + 1) + ' ' + escapeHTML(row.name) + '</td>' +
+          '<td><strong>' + row.best + '</strong></td>' +
+          '<td>' + row.runs + '</td>' +
+          '<td>' + row.bestCombo + '</td>' +
+          '<td>' + row.lastScore + '</td></tr>';
+      }).join("");
+      leaderboardListEl.innerHTML = html + '</tbody></table>';
+    }
+
+    function renderMenuStats() {
+      var best = getBestScore();
+      document.getElementById("menuBestScore").textContent = best;
+      document.getElementById("menuGamesPlayed").textContent = stats.gamesPlayed || 0;
+      document.getElementById("menuAchievementCount").textContent = unlockedAchievements.length + "/" + ACHIEVEMENTS.length;
+      bestScoreEl.textContent = best;
+    }
+
+    function setBodyMode(mode) {
+      document.body.className = "is-" + mode;
+    }
+
+    function showLeaderboardPanel() {
+      currentSidePanel = "leaderboard";
+      settingsPanelEl.classList.add("hidden");
+      leaderboardListEl.classList.remove("hidden");
+      sidePanelTitleEl.textContent = t("leaderboard");
+      renderLeaderboard();
+      fetchGlobalLeaderboard();
+    }
+
+    function showSettingsPanel() {
+      currentSidePanel = "settings";
+      leaderboardListEl.classList.add("hidden");
+      settingsPanelEl.classList.remove("hidden");
+      sidePanelTitleEl.textContent = t("settings");
+      syncSettingsControls();
+    }
+
+    function syncSettingsControls() {
+      languageSelect.value = settings.language;
+      playerNameInput.value = settings.playerName || "Pilot";
+      graphicsSelect.value = settings.graphics;
+      controlSelect.value = settings.controls;
+      soundToggle.checked = settings.sound !== false;
+      motionToggle.checked = !!settings.reducedMotion;
+      immortalToggle.checked = !!settings.immortalMode;
+    }
+
+    function applyLocalization() {
+      clearHUDCache();
+      var lang = I18N[settings.language] ? settings.language : "en";
+      document.documentElement.lang = lang;
+      document.getElementById("menuSubtitle").textContent = t("menuSubtitle");
+      startBtn.textContent = t("start");
+      leaderboardBtn.textContent = t("leaderboard");
+      settingsBtn.textContent = t("settings");
+      document.getElementById("overviewTitle").textContent = t("overview");
+      document.getElementById("menuBestLabel").textContent = t("bestRun");
+      document.getElementById("menuGamesLabel").textContent = t("gamesPlayed");
+      document.getElementById("menuAchievementsLabel").textContent = t("achievements");
+      document.getElementById("menuControlsText").textContent = t("controlsIntro");
+      document.getElementById("languageLabel").textContent = t("language");
+      document.getElementById("playerNameLabel").textContent = t("playerName");
+      document.getElementById("graphicsLabel").textContent = t("graphics");
+      document.getElementById("controlLabel").textContent = t("controls");
+      document.getElementById("soundLabel").textContent = t("sound");
+      document.getElementById("motionLabel").textContent = t("reducedMotion");
+      document.getElementById("immortalLabel").textContent = t("immortalMode");
+      document.getElementById("immortalNote").textContent = t("immortalNote");
+      document.getElementById("scoreLabel").textContent = t("score");
+      document.getElementById("bestLabel").textContent = t("best");
+      document.getElementById("livesLabel").textContent = t("lives");
+      document.getElementById("comboLabel").textContent = t("combo");
+      document.getElementById("speedLabel").textContent = t("speed");
+      document.getElementById("stageLabel").textContent = t("stage");
+      document.getElementById("powerupLabel").textContent = t("powerup");
+      cityPrefixEl.textContent = t("flyingOver");
+      helpEl.textContent = t("help");
+      pauseBtn.title = t("pause");
+      pauseBtn.setAttribute("aria-label", t("pause"));
+      muteBtn.title = settings.sound === false ? t("unmute") : t("mute");
+      muteBtn.setAttribute("aria-label", muteBtn.title);
+      fullscreenBtn.title = t("fullscreen");
+      fullscreenBtn.setAttribute("aria-label", t("fullscreen"));
+      resumeBtn.textContent = t("resume");
+      restartBtn.textContent = t("restart");
+      menuBtn.textContent = t("mainMenu");
+      reviveBtn.textContent = t("reviveBtn", { cost: REVIVE_COST });
+      runSummaryLabelEl.textContent = t("runScore");
+      threeErrorTextEl.textContent = t("threeError");
+      reloadBtn.textContent = t("reload");
+      graphicsSelect.options[0].textContent = t("graphicsLow");
+      graphicsSelect.options[1].textContent = t("graphicsMedium");
+      graphicsSelect.options[2].textContent = t("graphicsHigh");
+      controlSelect.options[0].textContent = t("controlsHybrid");
+      controlSelect.options[1].textContent = t("controlsPointer");
+      controlSelect.options[2].textContent = t("controlsKeyboard");
+      stageNameEl.textContent = t(STAGE_KEYS[currentStage] || "stageSunny");
+      if (currentSidePanel === "settings") {
+        sidePanelTitleEl.textContent = t("settings");
+      } else {
+        sidePanelTitleEl.textContent = t("leaderboard");
+      }
+      renderLeaderboard();
+      renderMenuStats();
+      syncSettingsControls();
+    }
+
+    function applyGraphicsSettings() {
+      if (!renderer) return;
+      var quality = getQualityConfig();
+      var dpr = window.devicePixelRatio || 1;
+      var pixelRatio = Math.min(dpr, quality.pixelRatioCap);
+      renderer.setPixelRatio(pixelRatio);
+      renderer.shadowMap.enabled = settings.graphics !== "low";
+      if (shadowLight && shadowLight.shadow && shadowLight.shadow.mapSize) {
+        shadowLight.shadow.mapSize.width = quality.shadowSize;
+        shadowLight.shadow.mapSize.height = quality.shadowSize;
+      }
+      if (weatherParticles) {
+        weatherParticles.material.opacity = settings.graphics === "low" ? 0.45 : 0.85;
+      }
+      handleWindowResize();
+    }
+
+    function getBaseGameSpeed() {
+      return Math.min(3.85, 1.08 + score * 0.0046 + currentStage * 0.12);
+    }
+
+    function getGameSpeed() {
+      var slowFactor = activeEffects.slow > 0 ? 0.72 : 1;
+      return getBaseGameSpeed() * slowFactor;
+    }
+
+    function getMotionScale() {
+      return settings.reducedMotion ? 0.45 : 1;
+    }
+
+    function gameNow() {
+      return gameClock * 1000;
+    }
+
+    function getQualityConfig() {
+      if (settings.graphics === "low") {
+        return {
+          pixelRatioCap: 1,
+          antialias: false,
+          shadowSize: 512,
+          stars: 900,
+          clouds: 14,
+          trees: 55,
+          flowers: 38,
+          cities: 6,
+          buildingMin: 6,
+          buildingRange: 7,
+          weatherParticles: 420,
+          exhaustParticles: 42,
+          forestUpdateInterval: 4,
+          cityUpdateInterval: 12
+        };
+      }
+      if (settings.graphics === "medium") {
+        return {
+          pixelRatioCap: 1.35,
+          antialias: true,
+          shadowSize: 768,
+          stars: 1200,
+          clouds: 18,
+          trees: 82,
+          flowers: 70,
+          cities: 8,
+          buildingMin: 8,
+          buildingRange: 9,
+          weatherParticles: 720,
+          exhaustParticles: 64,
+          forestUpdateInterval: 3,
+          cityUpdateInterval: 8
+        };
+      }
+      return {
+        pixelRatioCap: 1.6,
+        antialias: true,
+        shadowSize: 1024,
+        stars: 1600,
+        clouds: 22,
+        trees: 105,
+        flowers: 95,
+        cities: 10,
+        buildingMin: 9,
+        buildingRange: 10,
+        weatherParticles: 980,
+        exhaustParticles: 78,
+        forestUpdateInterval: 2,
+        cityUpdateInterval: 6
+      };
+    }
+
+    function getActivePowerupText() {
+      var labels = [];
+      if (settings.immortalMode) labels.push(t("immortalHud"));
+      powerupTypes.forEach(function(type) {
+        if (activeEffects[type] > 0) labels.push(t(POWERUP_KEYS[type]) + " " + Math.ceil(activeEffects[type]) + "s");
+      });
+      return labels.join(" / ");
+    }
+
+    function formatStageName(stage) {
+      return t(STAGE_KEYS[stage] || "stageSunny");
+    }
+
+    function createScene() {
+      HEIGHT = window.innerHeight;
+      WIDTH = window.innerWidth;
+
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x000000, 0.0006); // Fog density that looks good for atmospheric perspective
+
+      aspectRatio = WIDTH / HEIGHT;
+      fieldOfView = 60;
+      nearPlane = 1;
+      farPlane = 10000;
+
+      camera = new THREE.PerspectiveCamera(
+        fieldOfView,
+        aspectRatio,
+        nearPlane,
+        farPlane
+      );
+
+      camera.position.x = 0;
+      camera.position.y = 150;
+      camera.position.z = 100;
+
+      renderer = new THREE.WebGLRenderer({
+        alpha: true,
+        antialias: getQualityConfig().antialias,
+        powerPreference: "high-performance"
+      });
+      renderer.setClearColor(0x000000, 0);
+      renderer.gammaInput = true;
+      renderer.gammaOutput = true;
+
+      renderer.setSize(WIDTH, HEIGHT);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, getQualityConfig().pixelRatioCap));
+      renderer.shadowMap.enabled = settings.graphics !== "low";
+
+      container = document.getElementById("world");
+      container.appendChild(renderer.domElement);
+
+      window.addEventListener("resize", handleWindowResize, false);
+    }
+
+    function handleWindowResize() {
+      HEIGHT = window.innerHeight;
+      WIDTH = window.innerWidth;
+      renderer.setSize(WIDTH, HEIGHT);
+      camera.aspect = WIDTH / HEIGHT;
+      camera.updateProjectionMatrix();
+    }
+
+    function createLights() {
+      hemisphereLight = new THREE.HemisphereLight(0xddeeff, 0x1d2f1d, 0.85);
+      shadowLight = new THREE.DirectionalLight(0xfff4dc, 1.35);
+
+      shadowLight.position.set(-220, 520, 480);
+      shadowLight.castShadow = true;
+
+      shadowLight.shadow.camera.left = -700;
+      shadowLight.shadow.camera.right = 700;
+      shadowLight.shadow.camera.top = 700;
+      shadowLight.shadow.camera.bottom = -700;
+      shadowLight.shadow.camera.near = 1;
+      shadowLight.shadow.camera.far = 1200;
+
+      var quality = getQualityConfig();
+      shadowLight.shadow.mapSize.width = quality.shadowSize;
+      shadowLight.shadow.mapSize.height = quality.shadowSize;
+      shadowLight.shadow.bias = -0.0001;
+
+      scene.add(hemisphereLight);
+      scene.add(shadowLight);
+      
+      var ambientLight = new THREE.AmbientLight(0x2b3440, 0.35);
+      var rimLight = new THREE.DirectionalLight(0x9fd8ff, 0.45);
+      rimLight.position.set(420, 180, -520);
+      scene.add(ambientLight);
+      scene.add(rimLight);
+    }
+
+    Land = function () {
+      var geom = new THREE.CylinderGeometry(3000, 3000, 4000, 40, 10);
+      
+      // Add slight bumps for low poly look
+      for (var i = 0; i < geom.vertices.length; i++) {
+        var v = geom.vertices[i];
+        v.x += -15 + Math.random() * 30;
+        v.y += -15 + Math.random() * 30;
+        v.z += -15 + Math.random() * 30;
+      }
+      geom.computeFaceNormals();
+
+      var mat = new THREE.MeshStandardMaterial({
+        color: 0x2f9b4b,
+        roughness: 0.96,
+        metalness: 0.02,
+        flatShading: true
+      });
+
+      this.mesh = new THREE.Mesh(geom, mat);
+      this.mesh.rotation.x = -Math.PI / 2;
+      this.mesh.receiveShadow = true;
+    };
+
+    Orbit = function () {
+      this.mesh = new THREE.Object3D();
+    };
+
+    Sun = function () {
+      this.mesh = new THREE.Object3D();
+
+      var sunGeom = new THREE.SphereGeometry(400, 32, 32);
+      var sunMat = new THREE.MeshBasicMaterial({ color: 0xfff4c6 });
+      var sunMesh = new THREE.Mesh(sunGeom, sunMat);
+
+      var auraGeom = new THREE.SphereGeometry(480, 32, 32);
+      var auraMat = new THREE.MeshBasicMaterial({ color: 0xffbb55, transparent: true, opacity: 0.32 });
+      var aura = new THREE.Mesh(auraGeom, auraMat);
+      
+      var auraGeom2 = new THREE.SphereGeometry(600, 32, 32);
+      var auraMat2 = new THREE.MeshBasicMaterial({ color: 0xff5500, transparent: true, opacity: 0.15 });
+      var aura2 = new THREE.Mesh(auraGeom2, auraMat2);
+
+      this.mesh.add(sunMesh);
+      this.mesh.add(aura);
+      this.mesh.add(aura2);
+    };
+    
+    Stars = function() {
+      this.mesh = new THREE.Object3D();
+      var starsGeom = new THREE.Geometry();
+      for (var i = 0; i < getQualityConfig().stars; i++) {
+        var vertex = new THREE.Vector3();
+        vertex.x = Math.random() * 8000 - 4000;
+        vertex.y = Math.random() * 8000 - 4000;
+        vertex.z = Math.random() * -10000 - 1000;
+        starsGeom.vertices.push(vertex);
+      }
+      var starsMat = new THREE.PointsMaterial({ 
+        color: 0xffffff, 
+        size: 8, 
+        sizeAttenuation: true, 
+        transparent: true, 
+        opacity: 0 
+      });
+      this.points = new THREE.Points(starsGeom, starsMat);
+      this.mesh.add(this.points);
+    };
+    
+    SolarSystem = function() {
+      this.mesh = new THREE.Object3D();
+      this.planets = [];
+      
+      var createPlanet = function(radius, color, x, z) {
+         var geom = new THREE.IcosahedronGeometry(radius, 2); // Smoother planets
+         var mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.8, flatShading: true });
+         var p = new THREE.Mesh(geom, mat);
+         p.position.set(x, 0, z);
+         return p;
+      };
+
+      this.sun = createPlanet(200, 0xffbb00, 0, -800);
+      this.sun.material = new THREE.MeshBasicMaterial({color: 0xffaa00});
+      var sunAura = new THREE.Mesh(
+         new THREE.SphereGeometry(240, 20, 20),
+         new THREE.MeshBasicMaterial({ color: 0xff4400, transparent: true, opacity: 0.3 })
+      );
+      this.sun.add(sunAura);
+      this.mesh.add(this.sun);
+      
+      this.mercury = createPlanet(15, 0x888888, -250, -800);
+      this.mesh.add(this.mercury);
+      this.planets.push(this.mercury);
+
+      this.venus = createPlanet(35, 0xffddaa, 250, -750);
+      this.mesh.add(this.venus);
+      this.planets.push(this.venus);
+
+      this.earth = createPlanet(40, 0x2266cc, -450, -700);
+      this.mesh.add(this.earth);
+      this.planets.push(this.earth);
+      
+      this.mars = createPlanet(25, 0xcc4422, 350, -900);
+      this.mesh.add(this.mars);
+      this.planets.push(this.mars);
+      
+      this.jupiter = createPlanet(90, 0xccaa88, 650, -1000);
+      this.mesh.add(this.jupiter);
+      this.planets.push(this.jupiter);
+      
+      this.saturn = createPlanet(70, 0xeeddcc, -750, -1100);
+      var ringGeom = new THREE.TorusGeometry(120, 15, 2, 30);
+      var ringMat = new THREE.MeshStandardMaterial({color: 0xaa9988, flatShading: true});
+      var ring = new THREE.Mesh(ringGeom, ringMat);
+      ring.rotation.x = Math.PI / 2.5;
+      this.saturn.add(ring);
+      this.mesh.add(this.saturn);
+      this.planets.push(this.saturn);
+
+      this.uranus = createPlanet(50, 0xadd8e6, 500, -1300);
+      var uRing = new THREE.Mesh(new THREE.TorusGeometry(80, 5, 2, 20), ringMat);
+      uRing.rotation.x = Math.PI / 2; // Vertical ring
+      this.uranus.add(uRing);
+      this.mesh.add(this.uranus);
+      this.planets.push(this.uranus);
+
+      this.neptune = createPlanet(48, 0x00008b, -400, -1500);
+      this.mesh.add(this.neptune);
+      this.planets.push(this.neptune);
+      
+      // Space ambient light for planets
+      var spaceLight = new THREE.PointLight(0xffffff, 2, 3000);
+      spaceLight.position.set(0, 0, -800);
+      this.mesh.add(spaceLight);
+      
+      this.mesh.position.set(0, -2000, -2000); // Start hidden
+      this.mesh.visible = false;
+    };
+
+    Cloud = function () {
+      this.mesh = new THREE.Object3D();
+
+      var geom = new THREE.DodecahedronGeometry(20, 0);
+      var mat = new THREE.MeshStandardMaterial({
+        color: 0xf5f7fb,
+        roughness: 0.82,
+        metalness: 0.02,
+        transparent: true,
+        opacity: 0.94,
+        flatShading: true
+      });
+
+      var nBlocs = 3 + Math.floor(Math.random() * 3);
+
+      for (var i = 0; i < nBlocs; i++) {
+        var m = new THREE.Mesh(geom, mat);
+        m.position.x = i * 15;
+        m.position.y = Math.random() * 10;
+        m.position.z = Math.random() * 10;
+        m.rotation.z = Math.random() * Math.PI * 2;
+        m.rotation.y = Math.random() * Math.PI * 2;
+
+        var s = 0.1 + Math.random() * 0.9;
+        m.scale.set(s, s, s);
+        this.mesh.add(m);
+      }
+    };
+
+    Sky = function () {
+      this.mesh = new THREE.Object3D();
+      this.nClouds = getQualityConfig().clouds;
+
+      var stepAngle = Math.PI * 2 / this.nClouds;
+
+      for (var i = 0; i < this.nClouds; i++) {
+        var c = new Cloud();
+
+        var a = stepAngle * i;
+        var h = 3200 + Math.random() * 200;
+
+        c.mesh.position.y = Math.sin(a) * h;
+        c.mesh.position.x = Math.cos(a) * h;
+        c.mesh.rotation.z = a + Math.PI / 2;
+        c.mesh.position.z = -400 - Math.random() * 400;
+
+        var s = 1 + Math.random() * 2;
+        c.mesh.scale.set(s, s, s);
+
+        this.mesh.add(c.mesh);
+      }
+    };
+
+    Tree = function () {
+      this.mesh = new THREE.Object3D();
+
+      var trunkMat = new THREE.MeshStandardMaterial({
+        color: 0x5d4037, // Rich brown
+        roughness: 0.9,
+        flatShading: true
+      });
+
+      var leavesMat = new THREE.MeshStandardMaterial({
+        color: 0x2e7d32, // Deep green
+        roughness: 0.8,
+        flatShading: true
+      });
+      
+      var leavesMat2 = new THREE.MeshStandardMaterial({
+        color: 0x4caf50, // Lighter green
+        roughness: 0.8,
+        flatShading: true
+      });
+
+      var trunk = new THREE.Mesh(new THREE.CylinderGeometry(4, 6, 25, 5), trunkMat);
+      trunk.position.y = 12.5;
+      trunk.castShadow = true;
+      trunk.receiveShadow = true;
+      this.mesh.add(trunk);
+
+      // Create detailed leafy canopy
+      this.canopy = new THREE.Object3D();
+      
+      var leaf1 = new THREE.Mesh(new THREE.IcosahedronGeometry(15, 0), leavesMat);
+      leaf1.position.y = 30;
+      leaf1.castShadow = true;
+      leaf1.receiveShadow = true;
+      this.canopy.add(leaf1);
+      
+      var leaf2 = new THREE.Mesh(new THREE.IcosahedronGeometry(12, 0), leavesMat2);
+      leaf2.position.set(-8, 25, 8);
+      leaf2.castShadow = true;
+      leaf2.receiveShadow = true;
+      this.canopy.add(leaf2);
+      
+      var leaf3 = new THREE.Mesh(new THREE.IcosahedronGeometry(10, 0), leavesMat2);
+      leaf3.position.set(8, 28, -5);
+      leaf3.castShadow = true;
+      leaf3.receiveShadow = true;
+      this.canopy.add(leaf3);
+      
+      this.mesh.add(this.canopy);
+
+      var snowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true });
+      this.snowCap = new THREE.Mesh(new THREE.IcosahedronGeometry(8, 0), snowMat);
+      this.snowCap.position.y = 40;
+      this.canopy.add(this.snowCap);
+      
+      // Store base scale for animation
+      this.baseScale = 0.3 + Math.random() * 0.75;
+      this.mesh.scale.set(this.baseScale, this.baseScale, this.baseScale);
+      
+      // Sway parameters
+      this.swaySpeed = 0.002 + Math.random() * 0.002;
+      this.swayOffset = Math.random() * Math.PI * 2;
+    };
+
+    City = function() {
+       this.mesh = new THREE.Object3D();
+       this.style = "AMERICAN";
+    };
+
+    City.prototype.build = function(style) {
+       this.style = style;
+       while(this.mesh.children.length > 0) { 
+           this.mesh.remove(this.mesh.children[0]); 
+       }
+       
+       var quality = getQualityConfig();
+       var nBuildings = quality.buildingMin + Math.floor(Math.random() * quality.buildingRange);
+       var mat1, mat2;
+       
+       if (style === "AMERICAN") {
+          mat1 = new THREE.MeshStandardMaterial({color: 0x223344, roughness: 0.2, metalness: 0.8});
+          mat2 = new THREE.MeshStandardMaterial({color: 0x445566, roughness: 0.3, metalness: 0.7});
+          for(var i=0; i<nBuildings; i++) {
+             var h = 40 + Math.random() * 80;
+             var w = 15 + Math.random() * 15;
+             var b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), Math.random()>0.5?mat1:mat2);
+             b.position.set(rand(-120, 120), h/2, rand(-80, 80));
+             this.mesh.add(b);
+          }
+       } else if (style === "ASIAN") {
+          mat1 = new THREE.MeshStandardMaterial({color: 0xaa2222, roughness: 0.7});
+          mat2 = new THREE.MeshStandardMaterial({color: 0x222222, roughness: 0.9});
+          for(var i=0; i<nBuildings; i++) {
+             var h = 20 + Math.random() * 40;
+             var w = 15 + Math.random() * 10;
+             var b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), mat1);
+             b.position.set(rand(-120, 120), h/2, rand(-80, 80));
+             var roof = new THREE.Mesh(new THREE.ConeGeometry(w*1.2, 10, 4), mat2);
+             roof.position.y = h/2 + 5;
+             roof.rotation.y = Math.PI/4;
+             b.add(roof);
+             this.mesh.add(b);
+          }
+       } else if (style === "RUSSIAN") {
+          mat1 = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 0.9});
+          var colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffaa00];
+          for(var i=0; i<nBuildings; i++) {
+             var h = 20 + Math.random() * 30;
+             var w = 15 + Math.random() * 10;
+             var b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), mat1);
+             b.position.set(rand(-120, 120), h/2, rand(-80, 80));
+             var domeMat = new THREE.MeshStandardMaterial({color: colors[Math.floor(Math.random()*colors.length)], roughness: 0.5});
+             var dome = new THREE.Mesh(new THREE.SphereGeometry(w*0.6, 8, 8), domeMat);
+             dome.position.y = h/2 + w*0.4;
+             dome.scale.y = 1.5;
+             b.add(dome);
+             this.mesh.add(b);
+          }
+       } else if (style === "MIDDLE_EASTERN") {
+          mat1 = new THREE.MeshStandardMaterial({color: 0xeeddaa, roughness: 0.9});
+          for(var i=0; i<nBuildings; i++) {
+             if (Math.random() > 0.8) {
+               var w = 40 + Math.random() * 40;
+               var b = new THREE.Mesh(new THREE.ConeGeometry(w, w*0.8, 4), mat1);
+               b.position.set(rand(-120, 120), w*0.4, rand(-80, 80));
+               b.rotation.y = Math.PI/4;
+               this.mesh.add(b);
+             } else {
+               var h = 10 + Math.random() * 20;
+               var w = 15 + Math.random() * 15;
+               var b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), mat1);
+               b.position.set(rand(-120, 120), h/2, rand(-80, 80));
+               this.mesh.add(b);
+             }
+          }
+       } else if (style === "MODERN") {
+          mat1 = new THREE.MeshStandardMaterial({color: 0xffffff, roughness: 0.5});
+          for(var i=0; i<nBuildings; i++) {
+             var h = 30 + Math.random() * 50;
+             var r = 10 + Math.random() * 10;
+             var b = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 16), mat1);
+             b.position.set(rand(-120, 120), h/2, rand(-80, 80));
+             this.mesh.add(b);
+          }
+       } else { // EUROPEAN
+          mat1 = new THREE.MeshStandardMaterial({color: 0xddddcc, roughness: 0.9});
+          mat2 = new THREE.MeshStandardMaterial({color: 0x883322, roughness: 0.9});
+          for(var i=0; i<nBuildings; i++) {
+             var h = 20 + Math.random() * 20;
+             var w = 20 + Math.random() * 10;
+             var b = new THREE.Mesh(new THREE.BoxGeometry(w, h, w), mat1);
+             b.position.set(rand(-120, 120), h/2, rand(-80, 80));
+             var roof = new THREE.Mesh(new THREE.ConeGeometry(w*0.8, 10, 4), mat2);
+             roof.position.y = h/2 + 5;
+             roof.rotation.y = Math.PI/4;
+             b.add(roof);
+             this.mesh.add(b);
+          }
+       }
+       
+       this.mesh.traverse(function(child) {
+          if (child instanceof THREE.Mesh) {
+             child.castShadow = settings.graphics === "high";
+             child.receiveShadow = settings.graphics !== "low";
+          }
+       });
+    };
+
+    Flower = function () {
+      this.mesh = new THREE.Object3D();
+
+      var stemMat = new THREE.MeshPhongMaterial({
+        color: Colors.green,
+        flatShading: true
+      });
+
+      var stem = new THREE.Mesh(new THREE.BoxGeometry(5, 50, 5), stemMat);
+      stem.position.y = 25;
+      stem.castShadow = false;
+      stem.receiveShadow = true;
+      this.mesh.add(stem);
+
+      var coreMat = new THREE.MeshPhongMaterial({
+        color: Colors.yellow,
+        flatShading: true
+      });
+
+      var core = new THREE.Mesh(new THREE.SphereGeometry(6, 8, 8), coreMat);
+      core.position.y = 50;
+      core.castShadow = false;
+      core.receiveShadow = true;
+      this.mesh.add(core);
+
+      var petalColors = [Colors.red, Colors.yellow, Colors.blue];
+      var petalColor = petalColors[Math.floor(Math.random() * petalColors.length)];
+
+      var petalMat = new THREE.MeshBasicMaterial({ color: petalColor });
+      for (var i = 0; i < 4; i++) {
+        var petal = new THREE.Mesh(new THREE.BoxGeometry(15, 20, 3), petalMat);
+        var angle = i * Math.PI / 2;
+        petal.position.set(Math.cos(angle) * 12, 50, Math.sin(angle) * 12);
+        petal.rotation.z = angle;
+        this.mesh.add(petal);
+      }
+    };
+
+    Forest = function () {
+      this.mesh = new THREE.Object3D();
+      this.trees = [];
+
+      this.nTrees = getQualityConfig().trees;
+      var stepAngle = Math.PI * 2 / this.nTrees;
+
+      for (var i = 0; i < this.nTrees; i++) {
+        var t = new Tree();
+        this.trees.push(t);
+        
+        var a = stepAngle * i;
+        var h = 3005;
+
+        t.mesh.position.y = Math.sin(a) * h;
+        t.mesh.position.x = Math.cos(a) * h;
+        t.mesh.rotation.z = a + (Math.PI / 2) * 3;
+        t.mesh.position.z = 0 - Math.random() * 600;
+
+        // Base scale is already set in Tree constructor, but let's re-apply it here just in case
+        t.angle = a; // Store angle to calculate global position later
+
+        this.mesh.add(t.mesh);
+      }
+
+      this.nFlowers = getQualityConfig().flowers;
+      stepAngle = Math.PI * 2 / this.nFlowers;
+
+      for (var j = 0; j < this.nFlowers; j++) {
+        var f = new Flower();
+        var b = stepAngle * j;
+        var hh = 3005;
+
+        f.mesh.position.y = Math.sin(b) * hh;
+        f.mesh.position.x = Math.cos(b) * hh;
+        f.mesh.rotation.z = b + (Math.PI / 2) * 3;
+        f.mesh.position.z = 0 - Math.random() * 600;
+
+        var fs = 0.1 + Math.random() * 0.3;
+        f.mesh.scale.set(fs, fs, fs);
+
+        this.mesh.add(f.mesh);
+      }
+    };
+
+    AirPlane = function () {
+      this.mesh = new THREE.Object3D();
+
+      var mainMat = new THREE.MeshStandardMaterial({ color: 0xd9dde3, roughness: 0.28, metalness: 0.72, flatShading: true });
+      var darkMat = new THREE.MeshStandardMaterial({ color: 0x171b22, roughness: 0.42, metalness: 0.86, flatShading: true });
+      var stripeMat = new THREE.MeshStandardMaterial({ color: 0x2f80ff, roughness: 0.35, metalness: 0.35, flatShading: true });
+      var glassMat = new THREE.MeshStandardMaterial({
+        color: 0x88ccff,
+        transparent: true,
+        opacity: 0.6,
+        roughness: 0.1,
+        metalness: 0.9,
+        flatShading: true
+      });
+
+      // Fuselage (Cylinder)
+      var geomFuselage = new THREE.CylinderGeometry(15, 8, 80, 10);
+      geomFuselage.rotateZ(Math.PI / 2);
+      var fuselage = new THREE.Mesh(geomFuselage, mainMat);
+      fuselage.castShadow = true;
+      fuselage.receiveShadow = true;
+      this.mesh.add(fuselage);
+
+      var stripe = new THREE.Mesh(new THREE.BoxGeometry(42, 3, 3), stripeMat);
+      stripe.position.set(2, 10, 13);
+      stripe.castShadow = true;
+      this.mesh.add(stripe);
+      var stripe2 = stripe.clone();
+      stripe2.position.z = -13;
+      this.mesh.add(stripe2);
+
+      // Nose
+      var geomNose = new THREE.CylinderGeometry(2, 15, 20, 10);
+      geomNose.rotateZ(Math.PI / 2);
+      var nose = new THREE.Mesh(geomNose, mainMat);
+      nose.position.x = 50;
+      nose.castShadow = true;
+      nose.receiveShadow = true;
+      this.mesh.add(nose);
+
+      // Cockpit Glass
+      var geomGlass = new THREE.CylinderGeometry(8, 12, 30, 6);
+      geomGlass.rotateZ(Math.PI / 2);
+      var glass = new THREE.Mesh(geomGlass, glassMat);
+      glass.position.set(15, 10, 0);
+      this.mesh.add(glass);
+
+      // Swept Wings
+      var geomWing = new THREE.BoxGeometry(30, 4, 120);
+      var wing = new THREE.Mesh(geomWing, mainMat);
+      wing.position.set(-5, 0, 0);
+      wing.rotation.y = Math.PI / 8; // Swept back
+      wing.castShadow = true;
+      wing.receiveShadow = true;
+      this.mesh.add(wing);
+      var wingStripe = new THREE.Mesh(new THREE.BoxGeometry(20, 5, 98), stripeMat);
+      wingStripe.position.set(-7, 3, 0);
+      wingStripe.rotation.y = Math.PI / 8;
+      this.mesh.add(wingStripe);
+
+      // Tail Fin
+      var geomTail = new THREE.BoxGeometry(25, 25, 4);
+      var tail = new THREE.Mesh(geomTail, mainMat);
+      tail.position.set(-35, 15, 0);
+      tail.rotation.z = -Math.PI / 6; // Swept back
+      tail.castShadow = true;
+      tail.receiveShadow = true;
+      this.mesh.add(tail);
+      
+      // Horizontal Stabilizers
+      var geomStab = new THREE.BoxGeometry(15, 2, 40);
+      var stab = new THREE.Mesh(geomStab, mainMat);
+      stab.position.set(-35, 0, 0);
+      this.mesh.add(stab);
+
+      // Jet Engines on wings
+      var geomEngine = new THREE.CylinderGeometry(6, 6, 25, 8);
+      geomEngine.rotateZ(Math.PI / 2);
+      var engineR = new THREE.Mesh(geomEngine, darkMat);
+      engineR.position.set(-5, -5, 30);
+      this.mesh.add(engineR);
+      
+      var engineL = engineR.clone();
+      engineL.position.set(-5, -5, -30);
+      this.mesh.add(engineL);
+
+      // Sleek Propeller
+      this.propeller = new THREE.Object3D();
+      var geomProp = new THREE.CylinderGeometry(0, 3, 10, 6);
+      geomProp.rotateZ(Math.PI / 2);
+      var spinner = new THREE.Mesh(geomProp, darkMat);
+      this.propeller.add(spinner);
+      
+      var blade1 = new THREE.Mesh(new THREE.BoxGeometry(1, 40, 4), darkMat);
+      blade1.position.set(2, 0, 0);
+      this.propeller.add(blade1);
+      
+      var blade2 = new THREE.Mesh(new THREE.BoxGeometry(1, 4, 40), darkMat);
+      blade2.position.set(2, 0, 0);
+      this.propeller.add(blade2);
+
+      this.propeller.position.set(60, 0, 0);
+      this.mesh.add(this.propeller);
+    };
+
+    Ring = function () {
+      this.mesh = new THREE.Object3D();
+      var ringMat = new THREE.MeshStandardMaterial({
+        color: 0xffd84d,
+        emissive: 0x553300,
+        roughness: 0.22,
+        metalness: 0.85,
+        flatShading: true
+      });
+
+      var ringGeom = new THREE.TorusGeometry(18, 5, 8, 16);
+      this.torus = new THREE.Mesh(ringGeom, ringMat);
+      this.torus.castShadow = true;
+      this.torus.receiveShadow = true;
+      this.mesh.add(this.torus);
+
+      var spark = new THREE.Mesh(
+        new THREE.SphereGeometry(3, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffffff })
+      );
+      spark.position.x = 22;
+      this.mesh.add(spark);
+
+      this.collected = false;
+    };
+
+    Obstacle = function (stage) {
+      this.mesh = new THREE.Object3D();
+      this.type = stage !== undefined ? stage : 3;
+
+      if (this.type === 0) { // Bird
+        var bodyMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.8, flatShading: true });
+        var beakMat = new THREE.MeshStandardMaterial({ color: 0xffaa00, roughness: 0.6, flatShading: true });
+        var body = new THREE.Mesh(new THREE.BoxGeometry(10, 10, 20), bodyMat);
+        var wing = new THREE.Mesh(new THREE.BoxGeometry(30, 2, 10), bodyMat);
+        var beak = new THREE.Mesh(new THREE.BoxGeometry(4, 4, 10), beakMat);
+        wing.position.y = 5;
+        beak.position.z = 15;
+        this.mesh.add(body);
+        this.mesh.add(wing);
+        this.mesh.add(beak);
+      } else if (this.type === 1) { // Ice block
+        var iceMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, transparent: true, opacity: 0.8, roughness: 0.2, metalness: 0.1, flatShading: true });
+        var ice = new THREE.Mesh(new THREE.IcosahedronGeometry(15, 0), iceMat);
+        var spike = new THREE.Mesh(new THREE.CylinderGeometry(0, 5, 25, 4), iceMat);
+        spike.position.y = 10;
+        this.mesh.add(ice);
+        this.mesh.add(spike);
+      } else if (this.type === 2) { // Storm Cloud
+        var cloudMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 1.0, flatShading: true });
+        var cloud = new THREE.Mesh(new THREE.DodecahedronGeometry(18, 0), cloudMat);
+        var sparkMat = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+        var spark = new THREE.Mesh(new THREE.BoxGeometry(4, 15, 4), sparkMat);
+        spark.position.y = -10;
+        this.mesh.add(cloud);
+        this.mesh.add(spark);
+      } else { // Meteor
+        var rockMat = new THREE.MeshStandardMaterial({ color: 0x5a4335, roughness: 0.86, metalness: 0.18, flatShading: true });
+        var glowMat = new THREE.MeshBasicMaterial({ color: 0xff6b1a, transparent: true, opacity: 0.2 });
+        var flameMat = new THREE.MeshBasicMaterial({ color: 0xff9b33, transparent: true, opacity: 0.34 });
+        var rock = new THREE.Mesh(new THREE.IcosahedronGeometry(18, 1), rockMat);
+        var glow = new THREE.Mesh(new THREE.IcosahedronGeometry(26, 1), glowMat);
+        var trail = new THREE.Mesh(new THREE.ConeGeometry(14, 54, 8), flameMat);
+        trail.position.z = -38;
+        trail.rotation.x = Math.PI / 2;
+        this.mesh.add(rock);
+        this.mesh.add(glow);
+        this.mesh.add(trail);
+      }
+      
+      this.mesh.castShadow = true;
+      this.mesh.receiveShadow = true;
+    };
+
+    PowerUp = function(type) {
+      this.mesh = new THREE.Object3D();
+      this.type = type || "shield";
+      this.collected = false;
+
+      var colors = {
+        shield: 0x41d6ff,
+        magnet: 0xff5c9a,
+        slow: 0x7df56d
+      };
+      var coreMat = new THREE.MeshStandardMaterial({
+        color: colors[this.type],
+        emissive: colors[this.type],
+        emissiveIntensity: 0.35,
+        roughness: 0.35,
+        metalness: 0.35,
+        flatShading: true
+      });
+      var shellMat = new THREE.MeshBasicMaterial({
+        color: colors[this.type],
+        transparent: true,
+        opacity: 0.22,
+        wireframe: true
+      });
+      var core = new THREE.Mesh(new THREE.OctahedronGeometry(16, 0), coreMat);
+      var shell = new THREE.Mesh(new THREE.TorusGeometry(24, 2.5, 6, 18), shellMat);
+      shell.rotation.x = Math.PI / 2;
+      this.mesh.add(core);
+      this.mesh.add(shell);
+      this.core = core;
+      this.shell = shell;
+    };
+
+    function createSky() {
+      sky = new Sky();
+      sky.mesh.position.y = offSet;
+      scene.add(sky.mesh);
+    }
+
+    function createLand() {
+      land = new Land();
+      land.mesh.position.y = offSet;
+      scene.add(land.mesh);
+    }
+
+    function createOrbit() {
+      orbit = new Orbit();
+      orbit.mesh.position.y = offSet;
+      orbit.mesh.rotation.z = -Math.PI / 6;
+      scene.add(orbit.mesh);
+    }
+
+    function createForest() {
+      forest = new Forest();
+      forest.mesh.position.y = offSet;
+      scene.add(forest.mesh);
+    }
+
+    function createCities() {
+       cityWorld = new THREE.Object3D();
+       cityWorld.position.y = offSet;
+       scene.add(cityWorld);
+       
+       var styles = ["ASIAN", "AMERICAN", "EUROPEAN", "RUSSIAN", "MIDDLE_EASTERN", "MODERN"];
+       var cityCount = getQualityConfig().cities;
+       var stepAngle = Math.PI * 2 / cityCount;
+       
+       for (var i=0; i<cityCount; i++) {
+          var city = new City();
+          var style = styles[Math.floor(Math.random() * styles.length)];
+          city.build(style);
+          cities.push(city);
+          
+          var a = stepAngle * i;
+          var h = 3000;
+
+          city.mesh.position.y = Math.sin(a) * h;
+          city.mesh.position.x = Math.cos(a) * h;
+          city.mesh.rotation.z = a + (Math.PI / 2) * 3;
+          city.mesh.position.z = 150 + Math.random() * 50; // Place right of the plane
+          
+          city.angle = a;
+          cityWorld.add(city.mesh);
+       }
+    }
+
+    function createSun() {
+      sun = new Sun();
+      sun.mesh.scale.set(1, 1, 0.3);
+      sun.mesh.position.set(0, -30, -850);
+      scene.add(sun.mesh);
+    }
+
+    var exhaustParticles;
+    var exhaustGeometry;
+    var exhaustIdx = 0;
+
+    function createPlane() {
+      airplane = new AirPlane();
+      airplane.mesh.scale.set(0.35, 0.35, 0.35);
+      airplane.mesh.position.set(-40, 110, -250);
+      scene.add(airplane.mesh);
+
+      exhaustGeometry = new THREE.Geometry();
+      for (var i = 0; i < getQualityConfig().exhaustParticles; i++) {
+        var p = new THREE.Vector3(0, -1000, 0);
+        p.life = 0;
+        p.maxLife = 1.0;
+        p.size = 1.0;
+        p.velocity = new THREE.Vector3(0, 0, 0);
+        exhaustGeometry.vertices.push(p);
+      }
+      var exhaustMat = new THREE.PointsMaterial({
+        color: 0x88ccff,
+        size: 10,
+        transparent: true,
+        opacity: 0.7,
+        blending: THREE.AdditiveBlending,
+        sizeAttenuation: true
+      });
+      exhaustParticles = new THREE.Points(exhaustGeometry, exhaustMat);
+      scene.add(exhaustParticles);
+    }
+
+    function createGameObjects() {
+      rings = [];
+      obstacles = [];
+      powerups = [];
+
+      for (var i = 0; i < 7; i++) {
+        var r = new Ring();
+        scene.add(r.mesh);
+        rings.push(r);
+      }
+
+      for (var j = 0; j < 8; j++) {
+        var m = new Obstacle(currentStage);
+        scene.add(m.mesh);
+        obstacles.push(m);
+      }
+
+      for (var k = 0; k < 3; k++) {
+        var type = powerupTypes[k % powerupTypes.length];
+        var p = new PowerUp(type);
+        scene.add(p.mesh);
+        powerups.push(p);
+      }
+    }
+
+    function spawnRing(ring, initial) {
+      ring.mesh.position.x = rand(-180, 160);
+      ring.mesh.position.y = rand(60, 250);
+      ring.mesh.position.z = initial ? rand(-2600, -1000) : rand(-2800, -1200);
+
+      ring.mesh.rotation.x = Math.random() * Math.PI;
+      ring.mesh.rotation.y = Math.random() * Math.PI;
+      ring.mesh.rotation.z = Math.random() * Math.PI;
+
+      ring.mesh.scale.set(1 + Math.random() * 0.4, 1 + Math.random() * 0.4, 1 + Math.random() * 0.4);
+      ring.collected = false;
+    }
+
+    function spawnObstacle(obstacle, initial) {
+      var targetType = currentStage;
+      if (currentStage > 0) {
+        var r = Math.random();
+        if (currentStage === 1) {
+          targetType = r > 0.8 ? 0 : 1;
+        } else if (currentStage === 2) {
+          if (r > 0.7) targetType = 2;
+          else if (r > 0.3) targetType = 1;
+          else targetType = 0;
+        } else if (currentStage === 3) {
+          targetType = r > 0.4 ? 3 : 2;
+        }
+      }
+
+      if (obstacle.type !== targetType) {
+        scene.remove(obstacle.mesh);
+        var idx = obstacles.indexOf(obstacle);
+        obstacle = new Obstacle(targetType);
+        scene.add(obstacle.mesh);
+        obstacles[idx] = obstacle;
+      }
+      
+      obstacle.mesh.position.x = rand(-215, 215);
+      obstacle.mesh.position.y = rand(35, 255);
+      obstacle.mesh.position.z = initial ? rand(-3600, -1200) : rand(-3800, -1250);
+
+      obstacle.mesh.rotation.x = Math.random() * Math.PI;
+      obstacle.mesh.rotation.y = Math.random() * Math.PI;
+      obstacle.mesh.rotation.z = Math.random() * Math.PI;
+
+      obstacle.mesh.scale.set(0.8 + Math.random() * 0.8, 0.8 + Math.random() * 0.8, 0.8 + Math.random() * 0.8);
+    }
+
+    function spawnPowerup(powerup, initial) {
+      powerup.type = powerupTypes[Math.floor(Math.random() * powerupTypes.length)];
+      scene.remove(powerup.mesh);
+      var fresh = new PowerUp(powerup.type);
+      var idx = powerups.indexOf(powerup);
+      fresh.mesh.position.x = rand(-170, 150);
+      fresh.mesh.position.y = rand(70, 230);
+      fresh.mesh.position.z = initial ? rand(-5600, -2200) : rand(-7000, -3200);
+      fresh.mesh.scale.set(1.0, 1.0, 1.0);
+      fresh.collected = false;
+      scene.add(fresh.mesh);
+      if (idx !== -1) {
+        powerups[idx] = fresh;
+      }
+    }
+
+    function resetGame(startNow) {
+      if (reviveInterval) clearInterval(reviveInterval);
+      score = 0;
+      lives = maxLives;
+      gameOver = !startNow;
+      won = false;
+      hitTimer = 0;
+      runTime = 0;
+      distance = 0;
+      comboCount = 0;
+      comboTimer = 0;
+      bestComboThisRun = 0;
+      ringsCollectedThisRun = 0;
+      currentStage = 0;
+      scoreMultiplier = 1;
+      activeEffects = { shield: 0, magnet: 0, slow: 0 };
+      runSaved = false;
+      frameCounter = 0;
+
+      mousePos = { x: 0, y: 0 };
+
+      airplane.mesh.position.set(-40, 110, -250);
+      airplane.mesh.rotation.set(0, 0, 0);
+      airplane.propeller.rotation.set(0, 0, 0);
+
+      for (var i = 0; i < rings.length; i++) {
+        spawnRing(rings[i], true);
+      }
+
+      for (var j = 0; j < obstacles.length; j++) {
+        spawnObstacle(obstacles[j], true);
+      }
+
+      for (var k = 0; k < powerups.length; k++) {
+        spawnPowerup(powerups[k], true);
+      }
+
+      modalEl.classList.add("hidden");
+      updateHUD();
+      if (startNow) {
+        soundManager.playStart();
+        soundManager.startMusic();
+      }
+    }
+
+    function startGame() {
+      soundManager.ensureReady();
+      stats.gamesPlayed = (stats.gamesPlayed || 0) + 1;
+      saveStats();
+      gameMode = "playing";
+      setBodyMode("playing");
+      menuOverlayEl.classList.add("hidden");
+      modalEl.classList.add("hidden");
+      resetGame(true);
+      renderMenuStats();
+    }
+
+    function restartGame() {
+      startGame();
+    }
+
+    function showMainMenu() {
+      if (reviveInterval) clearInterval(reviveInterval);
+      gameMode = "menu";
+      gameOver = true;
+      setBodyMode("menu");
+      modalEl.classList.add("hidden");
+      menuOverlayEl.classList.remove("hidden");
+      soundManager.stopMusic();
+      renderMenuStats();
+      if (currentSidePanel === "settings") showSettingsPanel();
+      else showLeaderboardPanel();
+    }
+
+    function pauseGame() {
+      if (gameMode !== "playing") return;
+      gameMode = "paused";
+      gameOver = true;
+      setBodyMode("paused");
+      soundManager.stopMusic();
+      modalTitleEl.textContent = t("pausedTitle");
+      modalTextEl.textContent = t("pausedText");
+      runSummaryEl.style.display = "none";
+      reviveBtn.style.display = "none";
+      resumeBtn.style.display = "inline-block";
+      restartBtn.style.display = "inline-block";
+      menuBtn.style.display = "inline-block";
+      modalEl.classList.remove("hidden");
+    }
+
+    function resumeGame() {
+      if (gameMode !== "paused") return;
+      gameMode = "playing";
+      gameOver = false;
+      setBodyMode("playing");
+      modalEl.classList.add("hidden");
+      soundManager.startMusic();
+    }
+
+    function togglePause() {
+      if (gameMode === "playing") pauseGame();
+      else if (gameMode === "paused") resumeGame();
+    }
+
+    function updateHUD() {
+      var gameSpeed = getGameSpeed();
+      var baseSpeed = getBaseGameSpeed();
+      var baseMultiplier = baseSpeed >= 2.0 ? 3 : (baseSpeed >= 1.45 ? 2 : 1);
+      var comboBonus = Math.min(3, Math.floor(comboCount / 5));
+      scoreMultiplier = Math.min(6, baseMultiplier + comboBonus);
+      
+      setTextIfChanged(scoreEl, "score", score + (scoreMultiplier > 1 ? " (x" + scoreMultiplier + ")" : ""));
+      setTextIfChanged(bestScoreEl, "bestScore", Math.max(getBestScore(), score));
+      setTextIfChanged(comboEl, "combo", comboCount + (comboTimer > 0 ? " / " + Math.ceil(comboTimer) + "s" : ""));
+      
+      var heartsHTML = "";
+      for (var i = 0; i < maxLives; i++) {
+        if (i < lives) {
+          heartsHTML += "<span style='color: #ff4d4d; margin-right: 2px;'>❤</span>";
+        } else {
+          heartsHTML += "<span style='color: #666666; margin-right: 2px;'>❤</span>";
+        }
+      }
+      setHTMLIfChanged(livesEl, "lives", heartsHTML);
+      
+      setTextIfChanged(speedEl, "speed", gameSpeed.toFixed(1) + "x");
+      setTextIfChanged(stageNameEl, "stageName", formatStageName(currentStage));
+      var powerupText = getActivePowerupText();
+      setDisplayIfChanged(powerupBadgeEl, "powerupDisplay", powerupText ? "inline-block" : "none");
+      setTextIfChanged(powerupTextEl, "powerupText", powerupText);
+    }
+
+    function showEndScreen(title, text) {
+      if (reviveInterval) clearInterval(reviveInterval);
+      saveHighScore();
+      gameMode = "gameover";
+      setBodyMode("gameover");
+      soundManager.stopMusic();
+      modalTitleEl.textContent = title;
+      modalTextEl.textContent = text;
+      runSummaryEl.style.display = "flex";
+      runSummaryScoreEl.textContent = score;
+      resumeBtn.style.display = "none";
+      reviveBtn.style.display = "none";
+      restartBtn.style.display = "inline-block";
+      menuBtn.style.display = "inline-block";
+      modalEl.classList.remove("hidden");
+    }
+
+    function showReviveScreen() {
+      gameMode = "revive";
+      gameOver = true;
+      reviveTimer = 5;
+      setBodyMode("gameover");
+      modalTitleEl.textContent = t("crashTitle");
+      modalTextEl.textContent = t("reviveText", { cost: REVIVE_COST, seconds: reviveTimer });
+      runSummaryEl.style.display = "flex";
+      runSummaryScoreEl.textContent = score;
+      resumeBtn.style.display = "none";
+      reviveBtn.style.display = "inline-block";
+      restartBtn.style.display = "inline-block";
+      menuBtn.style.display = "inline-block";
+      modalEl.classList.remove("hidden");
+
+      reviveInterval = setInterval(function() {
+        reviveTimer--;
+        if (reviveTimer > 0) {
+          modalTextEl.textContent = t("reviveText", { cost: REVIVE_COST, seconds: reviveTimer });
+        } else {
+          clearInterval(reviveInterval);
+          showEndScreen(t("gameOverTitle"), t("gameOverText"));
+        }
+      }, 1000);
+    }
+
+    function doRevive() {
+      if (score >= REVIVE_COST) {
+        clearInterval(reviveInterval);
+        score -= REVIVE_COST;
+        lives = maxLives;
+        gameMode = "playing";
+        gameOver = false;
+        hitTimer = 1.5; // Invincibility briefly
+        activeEffects.shield = Math.max(activeEffects.shield, POWERUP_DURATIONS.reviveShield);
+        stats.totalRevives = (stats.totalRevives || 0) + 1;
+        saveStats();
+        unlockAchievement("revive");
+        
+        for (var i = 0; i < obstacles.length; i++) {
+           if (obstacles[i].mesh.position.z > -1000) {
+             spawnObstacle(obstacles[i], false);
+           }
+        }
+        
+        modalEl.classList.add("hidden");
+        setBodyMode("playing");
+        soundManager.startMusic();
+        updateHUD();
+      }
+    }
+
+    function handlePointerMove(event) {
+      if (settings.controls === "keyboard") return;
+      var x = event.clientX;
+      var y = event.clientY;
+
+      if (event.touches && event.touches.length) {
+        x = event.touches[0].clientX;
+        y = event.touches[0].clientY;
+      }
+
+      mousePos.x = -1 + (x / WIDTH) * 2;
+      mousePos.y = 1 - (y / HEIGHT) * 2;
+    }
+
+    function handleKeyDown(event) {
+      var target = event.target;
+      var isTyping = target && (target.tagName === "INPUT" || target.tagName === "SELECT" || target.tagName === "TEXTAREA");
+      var key = event.key.toLowerCase();
+      if (isTyping && key !== "escape") return;
+
+      if (["arrowleft", "arrowright", "arrowup", "arrowdown", " "].indexOf(key) !== -1 && gameMode === "playing") {
+        event.preventDefault();
+      }
+
+      if (key === "p") {
+        togglePause();
+        return;
+      }
+      if (key === "escape") {
+        if (gameMode === "playing") pauseGame();
+        else if (gameMode === "paused") resumeGame();
+        return;
+      }
+      if (key === "f") {
+        toggleFullscreen();
+        return;
+      }
+      if (key === "m") {
+        soundManager.setMuted(settings.sound !== false);
+        return;
+      }
+      if ((key === "enter" || key === " ") && gameMode === "menu") {
+        startGame();
+        return;
+      }
+
+      keys[key] = true;
+    }
+
+    function handleKeyUp(event) {
+      keys[event.key.toLowerCase()] = false;
+    }
+
+    function toggleFullscreen() {
+      var root = document.documentElement;
+      if (!document.fullscreenElement && root.requestFullscreen) {
+        root.requestFullscreen();
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+
+    function applyKeyboardControls() {
+      if (gameMode !== "playing" || settings.controls === "pointer") return;
+      var step = 0.025;
+
+      if (keys["arrowleft"] || keys["a"]) mousePos.x -= step;
+      if (keys["arrowright"] || keys["d"]) mousePos.x += step;
+      if (keys["arrowup"] || keys["w"]) mousePos.y += step;
+      if (keys["arrowdown"] || keys["s"]) mousePos.y -= step;
+
+      mousePos.x = clamp(mousePos.x, -0.95, 0.95);
+      mousePos.y = clamp(mousePos.y, -0.95, 0.95);
+    }
+
+    function updatePlane() {
+      var targetY = normalize(mousePos.y, -0.75, 0.75, 50, 190);
+      var targetX = normalize(mousePos.x, -0.75, 0.75, -100, -20);
+
+      // Smoother interpolation with easing
+      var smoothFactor = 0.08;
+      airplane.mesh.position.y += (targetY - airplane.mesh.position.y) * smoothFactor;
+      airplane.mesh.position.x += (targetX - airplane.mesh.position.x) * smoothFactor;
+
+      // Smoother rotation with damping
+      var targetRotZ = (targetY - airplane.mesh.position.y) * 0.015;
+      var targetRotX = (airplane.mesh.position.y - targetY) * 0.008;
+      var targetRotY = (airplane.mesh.position.x - targetX) * 0.008;
+
+      airplane.mesh.rotation.z += (targetRotZ - airplane.mesh.rotation.z) * 0.15;
+      airplane.mesh.rotation.x += (targetRotX - airplane.mesh.rotation.x) * 0.15;
+      airplane.mesh.rotation.y += (targetRotY - airplane.mesh.rotation.y) * 0.15;
+
+      // Dynamic propeller speed based on game speed
+      var gameSpeed = getGameSpeed();
+      airplane.propeller.rotation.x += 0.35 * gameSpeed;
+
+      // Gentle hovering animation
+      var now = gameNow();
+      var motionScale = getMotionScale();
+      airplane.mesh.position.y += Math.sin(now * 0.002) * 0.1 * motionScale;
+
+      // Update exhaust
+      if (exhaustParticles) {
+         var verts = exhaustParticles.geometry.vertices;
+         var p = verts[exhaustIdx];
+         p.copy(airplane.mesh.position);
+         p.x -= 15;
+         p.y -= 2;
+         p.life = 1.0;
+         p.maxLife = 1.0;
+         p.size = 1.0;
+         p.velocity.set(-Math.random()*3 - 3, Math.random()*3 - 1.5, Math.random()*3 - 1.5);
+         exhaustIdx = (exhaustIdx + 1) % verts.length;
+
+         for (var i = 0; i < verts.length; i++) {
+            var pt = verts[i];
+            if (pt.life > 0) {
+               pt.life -= 0.035;
+               pt.add(pt.velocity);
+               pt.y -= 0.5;
+               pt.velocity.x *= 0.98;
+               pt.velocity.y *= 0.98;
+               pt.velocity.z *= 0.98;
+            } else {
+               pt.y = -1000;
+            }
+         }
+         exhaustParticles.geometry.verticesNeedUpdate = true;
+         var targetColor = currentStage === 3 ? 0xffaa00 : 0x88ccff;
+         exhaustParticles.material.color.setHex(targetColor);
+      }
+    }
+
+    function normalize(v, vmin, vmax, tmin, tmax) {
+      var nv = Math.max(Math.min(v, vmax), vmin);
+      var dv = vmax - vmin;
+      var pc = (nv - vmin) / dv;
+      var dt = tmax - tmin;
+      return tmin + (pc * dt);
+    }
+
+    var currentSkyColors = { tR: 105, tG: 143, tB: 196, bR: 155, bG: 206, bB: 230, hInt: 0.95, sInt: 1.25 };
+    function lerp(start, end, amt) {
+      return (1 - amt) * start + amt * end;
+    }
+
+    function updateBackgroundAndLighting() {
+      var target = { tR: 105, tG: 143, tB: 196, bR: 155, bG: 206, bB: 230, hInt: 0.95, sInt: 1.25 };
+      var targetOffSet = -3000;
+      
+      if (currentStage === 1) { // Snow
+        target = { tR: 205, tG: 218, tB: 232, bR: 118, bG: 145, bB: 172, hInt: 0.82, sInt: 0.72 };
+        sun.mesh.visible = false;
+        scene.fog.color.setHex(0xaaaaaa);
+        scene.fog.density = lerp(scene.fog.density, 0.0012, 0.05);
+      } else if (currentStage === 2) { // Storm
+        target = { tR: 38, tG: 44, tB: 53, bR: 12, bG: 17, bB: 24, hInt: 0.42, sInt: 0.32 };
+        sun.mesh.visible = false;
+        scene.fog.color.setHex(0x111111);
+        scene.fog.density = lerp(scene.fog.density, 0.002, 0.05);
+        if (Math.random() > 0.98) {
+           target.hInt = 3.0; target.sInt = 2.0; target.tR = 200; target.tG = 200; target.tB = 220;
+        }
+      } else if (currentStage === 3) { // Space
+        target = { tR: 5, tG: 5, tB: 10, bR: 0, bG: 0, bB: 5, hInt: 0.3, sInt: 0.3 };
+        sun.mesh.visible = false;
+        scene.fog.color.setHex(0x000000);
+        scene.fog.density = lerp(scene.fog.density, 0.0, 0.05);
+        targetOffSet = -5000; // Sink the earth
+        
+        if (stars) {
+           stars.points.material.opacity = lerp(stars.points.material.opacity, 1.0, 0.02);
+        }
+
+        if (solarSystem) {
+           solarSystem.mesh.visible = true;
+           solarSystem.mesh.position.y = lerp(solarSystem.mesh.position.y, 100, 0.01);
+           solarSystem.mesh.rotation.y += 0.0005;
+           for (var i = 0; i < solarSystem.planets.length; i++) {
+             solarSystem.planets[i].rotation.y += 0.01;
+           }
+        }
+      } else {
+        sun.mesh.visible = true;
+        scene.fog.color.setHex(0x8090a0);
+        scene.fog.density = lerp(scene.fog.density, 0.0006, 0.05);
+        
+        if (stars) {
+           stars.points.material.opacity = lerp(stars.points.material.opacity, 0.0, 0.05);
+        }
+        if (solarSystem) {
+           solarSystem.mesh.position.y = lerp(solarSystem.mesh.position.y, -2000, 0.02);
+           if (solarSystem.mesh.position.y < -1900) solarSystem.mesh.visible = false;
+        }
+      }
+
+      offSet = lerp(offSet, targetOffSet, 0.02);
+      if (land) {
+        land.mesh.position.y = offSet;
+        land.mesh.material.color.setHex(0x2f9b4b);
+      }
+      if (forest) forest.mesh.position.y = offSet;
+      if (sky) sky.mesh.position.y = offSet;
+      if (orbit) orbit.mesh.position.y = offSet;
+
+      currentSkyColors.tR = lerp(currentSkyColors.tR, target.tR, 0.05);
+      currentSkyColors.tG = lerp(currentSkyColors.tG, target.tG, 0.05);
+      currentSkyColors.tB = lerp(currentSkyColors.tB, target.tB, 0.05);
+      currentSkyColors.bR = lerp(currentSkyColors.bR, target.bR, 0.05);
+      currentSkyColors.bG = lerp(currentSkyColors.bG, target.bG, 0.05);
+      currentSkyColors.bB = lerp(currentSkyColors.bB, target.bB, 0.05);
+      currentSkyColors.hInt = lerp(currentSkyColors.hInt, target.hInt, 0.1);
+      currentSkyColors.sInt = lerp(currentSkyColors.sInt, target.sInt, 0.1);
+
+      container.style.background = "linear-gradient(to bottom, rgb(" +
+        Math.round(currentSkyColors.tR) + "," + Math.round(currentSkyColors.tG) + "," + Math.round(currentSkyColors.tB) + "), rgb(" +
+        Math.round(currentSkyColors.bR) + "," + Math.round(currentSkyColors.bG) + "," + Math.round(currentSkyColors.bB) + "))";
+
+      scene.fog.color.setRGB(currentSkyColors.bR / 255, currentSkyColors.bG / 255, currentSkyColors.bB / 255);
+      hemisphereLight.intensity = currentSkyColors.hInt;
+      shadowLight.intensity = currentSkyColors.sInt;
+    }
+
+    var ringColors = [0xffd700, 0x00ffff, 0x8a2be2, 0xff00ff];
+    var ringEmissives = [0x553300, 0x004444, 0x330055, 0x550055];
+
+    function updateCollectibles() {
+      var gameSpeed = getGameSpeed();
+      var planePos = airplane.mesh.position;
+      var now = gameNow();
+      var motionScale = getMotionScale();
+      
+      var currentColor = ringColors[currentStage];
+      var currentEmissive = ringEmissives[currentStage];
+
+      for (var i = 0; i < rings.length; i++) {
+        var ring = rings[i];
+        
+        // Dynamic ring colors
+        if (ring.torus.material.color.getHex() !== currentColor) {
+           ring.torus.material.color.setHex(currentColor);
+           ring.torus.material.emissive.setHex(currentEmissive);
+        }
+
+        ring.mesh.position.z += gameSpeed * 11;
+        ring.mesh.rotation.y += (0.03 + Math.sin(now * 0.001 + i) * 0.02) * motionScale;
+        ring.mesh.rotation.x += (0.015 + Math.cos(now * 0.0015 + i) * 0.01) * motionScale;
+        ring.mesh.position.y += Math.sin(now * 0.003 + i * 0.5) * 0.2 * motionScale;
+
+        if (activeEffects.magnet > 0 && ring.mesh.position.z > -650 && ring.mesh.position.z < 70) {
+          ring.mesh.position.x += (planePos.x - ring.mesh.position.x) * 0.036;
+          ring.mesh.position.y += (planePos.y - ring.mesh.position.y) * 0.036;
+        }
+
+        if (ring.mesh.position.z > 180) {
+          spawnRing(ring, false);
+        }
+
+        var dx = planePos.x - ring.mesh.position.x;
+        var dy = planePos.y - ring.mesh.position.y;
+        var dz = planePos.z - ring.mesh.position.z;
+        var distSq = dx * dx + dy * dy + dz * dz;
+
+        var collectRadius = activeEffects.magnet > 0 ? 55 : 32;
+        if (distSq < collectRadius * collectRadius) {
+          comboCount++;
+          comboTimer = 2.4;
+          bestComboThisRun = Math.max(bestComboThisRun, comboCount);
+          ringsCollectedThisRun++;
+          score += 10 * scoreMultiplier;
+          ring.collected = true;
+          soundManager.playCollect();
+          unlockAchievement("firstRing");
+          if (comboCount >= 5) unlockAchievement("combo5");
+          spawnRing(ring, false);
+        }
+      }
+    }
+
+    function activatePowerup(type) {
+      if (type === "shield") activeEffects.shield = Math.max(activeEffects.shield, POWERUP_DURATIONS.shield);
+      if (type === "magnet") activeEffects.magnet = Math.max(activeEffects.magnet, POWERUP_DURATIONS.magnet);
+      if (type === "slow") activeEffects.slow = Math.max(activeEffects.slow, POWERUP_DURATIONS.slow);
+      soundManager.playPowerup();
+    }
+
+    function updatePowerups() {
+      var gameSpeed = getGameSpeed();
+      var planePos = airplane.mesh.position;
+      var motionScale = getMotionScale();
+
+      for (var i = 0; i < powerups.length; i++) {
+        var powerup = powerups[i];
+        powerup.mesh.position.z += gameSpeed * 10.5;
+        powerup.mesh.rotation.y += 0.04 * motionScale;
+        powerup.mesh.rotation.x += 0.025 * motionScale;
+        if (powerup.shell) powerup.shell.rotation.z += 0.05 * motionScale;
+
+        if (powerup.mesh.position.z > 180) {
+          spawnPowerup(powerup, false);
+          continue;
+        }
+
+        var dx = planePos.x - powerup.mesh.position.x;
+        var dy = planePos.y - powerup.mesh.position.y;
+        var dz = planePos.z - powerup.mesh.position.z;
+        var distSq = dx * dx + dy * dy + dz * dz;
+
+        if (distSq < 42 * 42) {
+          activatePowerup(powerup.type);
+          spawnPowerup(powerup, false);
+        }
+      }
+    }
+
+    var weatherParticles;
+    var lightningMesh;
+    var lightningTimer = 0;
+    
+    function createWeather() {
+      var particleCount = getQualityConfig().weatherParticles;
+      var pMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 6,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending,
+        sizeAttenuation: true
+      });
+
+      var pGeometry = new THREE.Geometry();
+      for (var p = 0; p < particleCount; p++) {
+        var pX = Math.random() * 2000 - 1000;
+        var pY = Math.random() * 2000 - 500;
+        var pZ = Math.random() * 2000 - 1000;
+        var particle = new THREE.Vector3(pX, pY, pZ);
+        particle.velocity = new THREE.Vector3(0, -Math.random() * 2 - 1, 0);
+        particle.windOffset = Math.random() * Math.PI * 2;
+        pGeometry.vertices.push(particle);
+      }
+      weatherParticles = new THREE.Points(pGeometry, pMaterial);
+      weatherParticles.visible = false;
+      scene.add(weatherParticles);
+
+      // Create lightning mesh
+      var lGeom = new THREE.Geometry();
+      for (var i = 0; i < 25; i++) {
+        lGeom.vertices.push(new THREE.Vector3(0, -i * 35, 0));
+      }
+      var lMat = new THREE.LineBasicMaterial({ color: 0xffffaa, linewidth: 5, transparent: true, opacity: 0.9 });
+      lightningMesh = new THREE.Line(lGeom, lMat);
+      lightningMesh.position.set(0, 400, -300);
+      lightningMesh.visible = false;
+      scene.add(lightningMesh);
+    }
+
+    function updateWeather() {
+      if (!weatherParticles) return;
+      var verts = weatherParticles.geometry.vertices;
+      var now = gameNow();
+      var motionScale = getMotionScale();
+      
+      if (currentStage === 0) { // Sunny
+        weatherParticles.visible = false;
+        lightningMesh.visible = false;
+      } else if (currentStage === 1) { // Snow
+        weatherParticles.visible = true;
+        lightningMesh.visible = false;
+        weatherParticles.material.color.setHex(0xffffff);
+        weatherParticles.material.size = 5;
+        for (var i = 0; i < verts.length; i++) {
+          var v = verts[i];
+          v.y -= 1.5;
+          v.x += Math.sin(now * 0.001 + v.windOffset) * 0.8 * motionScale;
+          v.z += Math.cos(now * 0.001 + v.windOffset) * 0.3 * motionScale;
+          if (v.y < -500) v.y = 1500;
+        }
+        weatherParticles.geometry.verticesNeedUpdate = true;
+      } else if (currentStage === 2) { // Storm
+        weatherParticles.visible = true;
+        weatherParticles.material.color.setHex(0xaaaaaa);
+        weatherParticles.material.size = 12;
+        for (var j = 0; j < verts.length; j++) {
+          var vv = verts[j];
+          vv.y -= 45;
+          vv.x -= (6 + Math.sin(now * 0.002 + vv.windOffset) * 2) * motionScale;
+          if (vv.y < -500) vv.y = 1500;
+        }
+        weatherParticles.geometry.verticesNeedUpdate = true;
+
+        if (Math.random() > 0.965 && lightningTimer <= 0) {
+          lightningTimer = 0.6;
+          lightningMesh.visible = true;
+          lightningMesh.position.x = rand(-400, 400);
+          lightningMesh.position.z = rand(-600, -100);
+          for (var l = 1; l < lightningMesh.geometry.vertices.length; l++) {
+            lightningMesh.geometry.vertices[l].x = lightningMesh.geometry.vertices[l-1].x + rand(-35, 35);
+            lightningMesh.geometry.vertices[l].z = lightningMesh.geometry.vertices[l-1].z + rand(-35, 35);
+          }
+          lightningMesh.geometry.verticesNeedUpdate = true;
+        }
+
+        if (lightningTimer > 0) {
+          lightningTimer -= 0.04;
+          if (lightningTimer <= 0) {
+            lightningMesh.visible = false;
+          }
+        }
+      } else if (currentStage === 3) { // Space
+        weatherParticles.visible = true;
+        lightningMesh.visible = false;
+        weatherParticles.material.color.setHex(0xffffff);
+        weatherParticles.material.size = 3;
+        for (var k = 0; k < verts.length; k++) {
+          var vk = verts[k];
+          vk.z += 12;
+          vk.x += Math.sin(now * 0.0005 + vk.windOffset) * 0.2 * motionScale;
+          if (vk.z > 200) vk.z = -1800;
+        }
+        weatherParticles.geometry.verticesNeedUpdate = true;
+      }
+    }
+
+    function updateForest() {
+      if (!forest || !forest.trees) return;
+      var t = gameNow();
+      for (var i = 0; i < forest.trees.length; i++) {
+        var tree = forest.trees[i];
+        
+        // Sway animation
+        tree.canopy.rotation.x = Math.sin(t * tree.swaySpeed + tree.swayOffset) * 0.1;
+        tree.canopy.rotation.z = Math.cos(t * tree.swaySpeed + tree.swayOffset) * 0.1;
+        
+        // Smooth scale popping
+        var globalAngle = (tree.angle + forest.mesh.rotation.z) % (Math.PI * 2);
+        if (globalAngle < 0) globalAngle += Math.PI * 2;
+        
+        tree.snowCap.visible = (currentStage === 1); // Only show snow in Snow stage
+
+        var sinA = Math.sin(globalAngle);
+        var scale = 0.001;
+        
+        if (sinA > 0.8) {
+          scale = tree.baseScale;
+        } else if (sinA > 0.6) {
+          scale = tree.baseScale * ((sinA - 0.6) / 0.2);
+        }
+        
+        tree.mesh.scale.set(scale, scale, scale);
+      }
+    }
+
+    function updateObstacles() {
+      var gameSpeed = getGameSpeed();
+      var planePos = airplane.mesh.position;
+      var now = gameNow();
+      var motionScale = getMotionScale();
+
+      for (var i = 0; i < obstacles.length; i++) {
+        var obstacle = obstacles[i];
+        obstacle.mesh.position.z += gameSpeed * 15.5;
+        obstacle.mesh.rotation.x += (0.02 + Math.sin(now * 0.002 + i) * 0.015) * motionScale;
+        obstacle.mesh.rotation.y += (0.025 + Math.cos(now * 0.0025 + i) * 0.01) * motionScale;
+        obstacle.mesh.rotation.z += 0.01 * motionScale;
+        obstacle.mesh.position.y += Math.sin(now * 0.004 + i * 0.7) * 0.15 * motionScale;
+
+        if (obstacle.mesh.position.z > 180) {
+          spawnObstacle(obstacle, false);
+        }
+
+        var dx = planePos.x - obstacle.mesh.position.x;
+        var dy = planePos.y - obstacle.mesh.position.y;
+        var dz = planePos.z - obstacle.mesh.position.z;
+        var distSq = dx * dx + dy * dy + dz * dz;
+
+        if (distSq < 34 * 34 && hitTimer <= 0) {
+          if (settings.immortalMode) {
+            comboCount = 0;
+            comboTimer = 0;
+            hitTimer = 0.45;
+            soundManager.playObstacle();
+            spawnObstacle(obstacle, false);
+            continue;
+          }
+          if (activeEffects.shield > 0) {
+            activeEffects.shield = 0;
+            hitTimer = 0.65;
+            soundManager.playPowerup();
+            spawnObstacle(obstacle, false);
+            continue;
+          }
+          lives--;
+          comboCount = 0;
+          comboTimer = 0;
+          hitTimer = 0.4;
+          soundManager.playObstacle();
+          spawnObstacle(obstacle, false);
+
+          if (lives <= 0) {
+            lives = 0;
+            if (score >= REVIVE_COST) {
+              showReviveScreen();
+            } else {
+              gameOver = true;
+              showEndScreen(t("gameOverTitle"), t("gameOverText"));
+            }
+          }
+        }
+      }
+    }
+
+    var cityCountries = [
+      { name: "Japan", capital: "Tokyo", style: "ASIAN" },
+      { name: "China", capital: "Beijing", style: "ASIAN" },
+      { name: "Indonesia", capital: "Jakarta", style: "ASIAN" },
+      { name: "Bangladesh", capital: "Dhaka", style: "ASIAN" },
+      { name: "India", capital: "New Delhi", style: "MIDDLE_EASTERN" },
+      { name: "Egypt", capital: "Cairo", style: "MIDDLE_EASTERN" },
+      { name: "Pakistan", capital: "Islamabad", style: "MIDDLE_EASTERN" },
+      { name: "USA", capital: "Washington, D.C.", style: "AMERICAN" },
+      { name: "Mexico", capital: "Mexico City", style: "AMERICAN" },
+      { name: "Russia", capital: "Moscow", style: "RUSSIAN" },
+      { name: "Brazil", capital: "Brasilia", style: "MODERN" },
+      { name: "Nigeria", capital: "Abuja", style: "MODERN" },
+      { name: "Ethiopia", capital: "Addis Ababa", style: "MODERN" },
+      { name: "Germany", capital: "Berlin", style: "EUROPEAN" },
+      { name: "France", capital: "Paris", style: "EUROPEAN" }
+    ];
+
+    var currentActiveCity = null;
+
+    function updateCities() {
+       if (!cityWorld) return;
+       cityWorld.position.y = offSet;
+
+       if (currentStage === 3) { // Hide badge in space
+           cityBadgeEl.style.display = "none";
+           return;
+       }
+
+       var topCity = null;
+       var minDiff = 999;
+
+       for (var i = 0; i < cities.length; i++) {
+          var city = cities[i];
+          var globalAngle = (city.angle + cityWorld.rotation.z) % (Math.PI * 2);
+          if (globalAngle < 0) globalAngle += Math.PI * 2;
+          
+          var diff = Math.abs(globalAngle - Math.PI / 2);
+          if (diff < minDiff) {
+             minDiff = diff;
+             topCity = city;
+          }
+       }
+
+       if (topCity && topCity !== currentActiveCity && minDiff < 0.2) {
+          currentActiveCity = topCity;
+          var matching = cityCountries.filter(function(country) {
+             return country.style === topCity.style;
+          });
+          if (matching.length > 0) {
+             var c = matching[Math.floor(Math.random() * matching.length)];
+             cityNameEl.textContent = c.capital + ", " + c.name;
+             cityBadgeEl.style.display = "inline-block";
+          }
+       }
+    }
+
+    function updateStageProgression() {
+      if (score >= STAGE_THRESHOLDS.space) currentStage = 3; // Space
+      else if (score >= STAGE_THRESHOLDS.storm) currentStage = 2; // Storm
+      else if (score >= STAGE_THRESHOLDS.snow) currentStage = 1; // Snow
+      else currentStage = 0; // Sunny
+
+      if (score >= STAGE_THRESHOLDS.snow) unlockAchievement("score300");
+      if (score >= STAGE_THRESHOLDS.space) unlockAchievement("score1000");
+      if (runTime >= 60) unlockAchievement("survivor60");
+    }
+
+    function updateEffectTimers(dt) {
+      powerupTypes.forEach(function(type) {
+        activeEffects[type] = Math.max(0, activeEffects[type] - dt);
+      });
+      if (comboTimer > 0) {
+        comboTimer = Math.max(0, comboTimer - dt);
+        if (comboTimer === 0) comboCount = 0;
+      }
+    }
+
+    function stepFrame(dt) {
+      if (!renderer || !scene || !camera) return;
+      var frameScale = Math.max(0.2, Math.min(2.5, dt * 60));
+      gameClock += dt;
+      frameCounter++;
+
+      if (gameMode === "playing" && !gameOver) {
+        var quality = getQualityConfig();
+        var motionScale = getMotionScale();
+        runTime += dt;
+        distance += getGameSpeed() * 110 * dt;
+        applyKeyboardControls();
+        updateEffectTimers(dt);
+        updateStageProgression();
+
+        land.mesh.rotation.z += 0.001 * frameScale * motionScale;
+        orbit.mesh.rotation.z += 0.001 * frameScale * motionScale;
+        sky.mesh.rotation.z += 0.0006 * frameScale * motionScale;
+        forest.mesh.rotation.z += 0.001 * frameScale * motionScale;
+        if (cityWorld) cityWorld.rotation.z += 0.001 * frameScale * motionScale;
+        if (stars) stars.mesh.rotation.z += 0.0002 * frameScale * motionScale;
+
+        updatePlane();
+        updateCollectibles();
+        updatePowerups();
+        updateObstacles();
+        updateWeather();
+        if (frameCounter % quality.forestUpdateInterval === 0) updateForest();
+        if (frameCounter % quality.cityUpdateInterval === 0) updateCities();
+      }
+
+      updateBackgroundAndLighting();
+
+      if (hitTimer > 0) {
+        hitTimer = Math.max(0, hitTimer - dt);
+        flashEl.style.opacity = String(Math.max(0, hitTimer * 1.8));
+      } else {
+        flashEl.style.opacity = "0";
+      }
+
+      updateHUD();
+      renderer.render(scene, camera);
+    }
+
+    function loop(timestamp) {
+      var dt = lastFrameTime ? Math.min(0.05, (timestamp - lastFrameTime) / 1000) : 1 / 60;
+      lastFrameTime = timestamp;
+      stepFrame(dt);
+      requestAnimationFrame(loop);
+    }
+
+    function createSolarSystem() {
+      solarSystem = new SolarSystem();
+      scene.add(solarSystem.mesh);
+    }
+
+    function renderGameToText() {
+      var visibleRings = rings.slice(0, 5).map(function(ring) {
+        return {
+          x: Math.round(ring.mesh.position.x),
+          y: Math.round(ring.mesh.position.y),
+          z: Math.round(ring.mesh.position.z)
+        };
+      });
+      var visibleObstacles = obstacles.slice(0, 5).map(function(obstacle) {
+        return {
+          type: obstacle.type,
+          x: Math.round(obstacle.mesh.position.x),
+          y: Math.round(obstacle.mesh.position.y),
+          z: Math.round(obstacle.mesh.position.z)
+        };
+      });
+      var visiblePowerups = powerups.map(function(powerup) {
+        return {
+          type: powerup.type,
+          x: Math.round(powerup.mesh.position.x),
+          y: Math.round(powerup.mesh.position.y),
+          z: Math.round(powerup.mesh.position.z)
+        };
+      });
+      return JSON.stringify({
+        coordinateSystem: "Three.js world coordinates; x left/right, y up/down, z depth toward camera as it increases.",
+        mode: gameMode,
+        score: score,
+        best: getBestScore(),
+        lives: lives,
+        combo: comboCount,
+        multiplier: scoreMultiplier,
+        stage: currentStage,
+        stageName: formatStageName(currentStage),
+        stageThresholds: STAGE_THRESHOLDS,
+        speed: Number(getGameSpeed().toFixed(2)),
+        runTime: Number(runTime.toFixed(2)),
+        player: airplane ? {
+          x: Math.round(airplane.mesh.position.x),
+          y: Math.round(airplane.mesh.position.y),
+          z: Math.round(airplane.mesh.position.z)
+        } : null,
+        rings: visibleRings,
+        obstacles: visibleObstacles,
+        powerups: visiblePowerups,
+        activeEffects: {
+          shield: Number(activeEffects.shield.toFixed(2)),
+          magnet: Number(activeEffects.magnet.toFixed(2)),
+          slow: Number(activeEffects.slow.toFixed(2))
+        },
+        settings: {
+          language: settings.language,
+          graphics: settings.graphics,
+          controls: settings.controls,
+          sound: settings.sound !== false,
+          reducedMotion: !!settings.reducedMotion,
+          immortalMode: !!settings.immortalMode
+        }
+      });
+    }
+
+    function advanceTime(ms) {
+      var steps = Math.max(1, Math.round(ms / (1000 / 60)));
+      for (var i = 0; i < steps; i++) {
+        stepFrame(1 / 60);
+      }
+      return Promise.resolve();
+    }
+
+    function showThreeError() {
+      threeErrorEl.classList.add("show");
+      threeErrorTextEl.textContent = t("threeError");
+      reloadBtn.textContent = t("reload");
+      reloadBtn.onclick = function() {
+        window.location.reload();
+      };
+    }
+
+    function bindTouchButton(button) {
+      var key = button.getAttribute("data-key");
+      var start = function(event) {
+        event.preventDefault();
+        keys[key] = true;
+      };
+      var end = function(event) {
+        event.preventDefault();
+        keys[key] = false;
+      };
+      button.addEventListener("pointerdown", start);
+      button.addEventListener("pointerup", end);
+      button.addEventListener("pointercancel", end);
+      button.addEventListener("pointerleave", end);
+    }
+
+    function setupEvents() {
+      document.addEventListener("mousemove", handlePointerMove, false);
+      document.addEventListener("touchmove", handlePointerMove, { passive: false });
+      document.addEventListener("pointermove", handlePointerMove, false);
+
+      window.addEventListener("keydown", handleKeyDown, false);
+      window.addEventListener("keyup", handleKeyUp, false);
+
+      startBtn.addEventListener("click", startGame);
+      leaderboardBtn.addEventListener("click", showLeaderboardPanel);
+      settingsBtn.addEventListener("click", showSettingsPanel);
+      resumeBtn.addEventListener("click", resumeGame);
+      restartBtn.addEventListener("click", restartGame);
+      menuBtn.addEventListener("click", showMainMenu);
+      reviveBtn.addEventListener("click", doRevive);
+      pauseBtn.addEventListener("click", togglePause);
+      fullscreenBtn.addEventListener("click", toggleFullscreen);
+      muteBtn.addEventListener("click", function() {
+        soundManager.setMuted(settings.sound !== false);
+      });
+      reloadBtn.addEventListener("click", function() {
+        window.location.reload();
+      });
+
+      languageSelect.addEventListener("change", function() {
+        settings.language = languageSelect.value;
+        saveSettings();
+        applyLocalization();
+      });
+      playerNameInput.addEventListener("input", function() {
+        settings.playerName = playerNameInput.value.trim() || "Pilot";
+        saveSettings();
+      });
+      graphicsSelect.addEventListener("change", function() {
+        settings.graphics = graphicsSelect.value;
+        saveSettings();
+        applyGraphicsSettings();
+      });
+      controlSelect.addEventListener("change", function() {
+        settings.controls = controlSelect.value;
+        saveSettings();
+      });
+      soundToggle.addEventListener("change", function() {
+        soundManager.setMuted(!soundToggle.checked);
+      });
+      motionToggle.addEventListener("change", function() {
+        settings.reducedMotion = motionToggle.checked;
+        saveSettings();
+      });
+      immortalToggle.addEventListener("change", function() {
+        settings.immortalMode = immortalToggle.checked;
+        saveSettings();
+        updateHUD();
+      });
+
+      var touchButtons = document.querySelectorAll(".touch-btn");
+      for (var i = 0; i < touchButtons.length; i++) {
+        bindTouchButton(touchButtons[i]);
+      }
+    }
+
+    function init() {
+      applyLocalization();
+      if (window.__threeLoadFailed || !window.THREE) {
+        showThreeError();
+        return;
+      }
+
+      createScene();
+      createLights();
+      createPlane();
+      createOrbit();
+      createSun();
+      
+      stars = new Stars();
+      scene.add(stars.mesh);
+      
+      createSolarSystem();
+      createLand();
+      createForest();
+      createCities();
+      createSky();
+      createWeather();
+      createGameObjects();
+      setupEvents();
+      resetGame(false);
+      showMainMenu();
+      applyGraphicsSettings();
+      applyLocalization();
+      fetchGlobalLeaderboard();
+
+      window.render_game_to_text = renderGameToText;
+      window.advanceTime = advanceTime;
+      window.__skyRunnerDebug = {
+        start: startGame,
+        pause: pauseGame,
+        resume: resumeGame,
+        reset: function() { resetGame(false); showMainMenu(); },
+        setScore: function(value) { score = Math.max(0, Number(value) || 0); updateStageProgression(); updateHUD(); },
+        state: function() { return JSON.parse(renderGameToText()); }
+      };
+      loop();
+    }
+
+    window.addEventListener("load", init, false);
+  </script>
+</body>
+</html>
